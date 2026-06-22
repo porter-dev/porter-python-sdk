@@ -1,0 +1,62 @@
+name: CI
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+# Dependencies are pinned in uv.lock. `uv sync --frozen` installs exactly
+# what's in the lock and refuses to touch it, so CI is deterministic.
+# Refreshing dep versions happens via `uv lock` (bumps the file, which goes
+# through a PR), not implicitly each CI run.
+
+jobs:
+  lint:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v3
+        with:
+          enable-cache: true
+      - run: uv sync --python 3.11 --frozen --extra dev
+      - run: uv run ruff check .
+
+  typecheck:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v3
+        with:
+          enable-cache: true
+      - run: uv sync --python 3.11 --frozen --extra dev
+      - run: uv run mypy
+
+  test:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        python-version: ["3.10", "3.11", "3.12"]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v3
+        with:
+          enable-cache: true
+      - run: uv sync --python ${{ matrix.python-version }} --frozen --extra dev
+      - run: uv run pytest -v
+
+  install-smoke:
+    # Fresh-install check: simulates a clean install. Catches missing packaging
+    # metadata, missing __init__ exports, broken import paths, etc. that
+    # editable installs hide.
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v3
+        with:
+          enable-cache: true
+      - run: uv venv --python 3.11
+      - run: uv pip install .
+      - run: uv run python -c "from porter_sandbox import Sandbox, AsyncSandbox; print('imports ok')"
