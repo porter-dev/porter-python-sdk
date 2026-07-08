@@ -5,7 +5,7 @@ from __future__ import annotations
 
 import builtins
 
-from porter_sandbox._models import SandboxSpec
+from porter_sandbox._models import SandboxNetworkingSpec, SandboxSpec
 from porter_sandbox.enums import SandboxesPhase
 from porter_sandbox.resources.sandboxes import AsyncSandboxes as AsyncSandboxesResource
 from porter_sandbox.resources.sandboxes import Sandboxes as SandboxesResource
@@ -33,6 +33,7 @@ class Sandboxes:
         args: list[str] | None = None,
         env: dict[str, str] | None = None,
         volume_mounts: dict[str, str] | None = None,
+        networking: list[SandboxNetworkingSpec] | None = None,
     ) -> Sandbox:
         spec = SandboxSpec(
             image=image,
@@ -42,6 +43,7 @@ class Sandboxes:
             args=args,
             env=env,
             volume_mounts=volume_mounts,
+            networking=networking,
         )
         created = self._resource.create_sandbox(body=spec)
         return Sandbox(id=created.id, resource=self._resource)
@@ -89,6 +91,7 @@ class AsyncSandboxes:
         args: list[str] | None = None,
         env: dict[str, str] | None = None,
         volume_mounts: dict[str, str] | None = None,
+        networking: list[SandboxNetworkingSpec] | None = None,
     ) -> AsyncSandbox:
         spec = SandboxSpec(
             image=image,
@@ -98,6 +101,7 @@ class AsyncSandboxes:
             args=args,
             env=env,
             volume_mounts=volume_mounts,
+            networking=networking,
         )
         created = await self._resource.create_sandbox(body=spec)
         return AsyncSandbox(id=created.id, resource=self._resource)

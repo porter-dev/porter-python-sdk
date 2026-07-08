@@ -5,7 +5,13 @@ from __future__ import annotations
 
 from pydantic import BaseModel, Field
 
-from .enums import FilterValuesResponsePhases, LogLineLevel, StatusResponsePhase, VolumePhase
+from .enums import (
+    FilterValuesResponsePhases,
+    LogLineLevel,
+    SandboxDomainSpecVisibility,
+    StatusResponsePhase,
+    VolumePhase,
+)
 
 
 class CountPoint(BaseModel):
@@ -87,6 +93,16 @@ class ReadinessResponse(BaseModel):
     active_sandboxes: int = Field(description="Number of active sandboxes")
 
 
+class SandboxDomainSpec(BaseModel):
+    domain: str | None = Field(default=None, description="Fully qualified hostname for the sandbox, one label under the\ntarget ingress's domain. Unlike name it need not be unique, so\nsuccessive sandboxes can reuse one hostname (only one may be live\nat a time). Defaults to <name>.<ingress domain>, then\n<id>.<ingress domain>, when omitted.\n")
+    visibility: SandboxDomainSpecVisibility | None = Field(default=None, description="Which sandbox ingress serves the domain when the cluster has both a\npublic and a private one. Omit to default to whichever is\nconfigured, public winning. Rejected when the sandbox exposes a\nport but the requested ingress is not configured on the cluster.\n")
+
+
+class SandboxNetworkingSpec(BaseModel):
+    port: int = Field(description="Port the workload listens on; the per-sandbox Service targets it on\nthe pod. Privileged ports (1-1023) are not allowed.\n")
+    domains: list[SandboxDomainSpec] | None = Field(default=None, description="Domains the port is served on through a sandbox ingress. Omit to\nserve the port at the default hostname through the default ingress.\nCurrently only one entry is supported.\n")
+
+
 class SandboxSpec(BaseModel):
     image: str = Field(description="Container image to run")
     name: str | None = Field(default=None, description="Sandbox name, unique within the cluster. Must be a valid DNS label\n(lowercase alphanumeric and dashes). Defaults to the sandbox's id\nwhen omitted.\n")
@@ -95,6 +111,7 @@ class SandboxSpec(BaseModel):
     args: list[str] | None = Field(default=None, description="Arguments passed to the command")
     env: dict[str, str] | None = Field(default=None, description="Environment variables to set in the sandbox, keyed by name")
     volume_mounts: dict[str, str] | None = Field(default=None, description="Volumes to mount, keyed by the absolute mount path inside the\nsandbox; values are volume IDs.\n")
+    networking: list[SandboxNetworkingSpec] | None = Field(default=None, description="Network exposure for the sandbox. Omit to expose nothing. Currently\nonly one entry is supported.\n")
 
 
 class StatusResponse(BaseModel):
@@ -106,6 +123,7 @@ class StatusResponse(BaseModel):
     exit_code: int | None = Field(default=None, description="Exit code if completed")
     created_at: str = Field(description="When the sandbox was created")
     started_at: str | None = Field(default=None, description="When the sandbox pod started running")
+    host: str = Field(description="Public hostname the sandbox is reachable at. Empty when the sandbox\nexposes no port or the cluster has no sandbox ingress configured.\n")
     volume_mounts: dict[str, str] | None = Field(default=None, description="Volumes the sandbox mounts, keyed by mount path")
     exec_target: ExecTarget | None = Field(default=None, description="Where a client addresses an interactive exec into the running sandbox. Absent until the sandbox has a pod.")
 
@@ -126,4 +144,4 @@ class VolumeSpec(BaseModel):
     name: str | None = Field(default=None, description="Volume name, unique within the cluster. Must be a valid DNS label\n(lowercase alphanumeric and dashes). Defaults to the volume's id\nwhen omitted.\n")
 
 
-__all__ = ["CountPoint", "CountResponse", "CreateResponse", "Error", "ExecRequest", "ExecResponse", "ExecTarget", "FilterValuesResponse", "HealthResponse", "ListResponse", "LogLine", "LogsResponse", "LookupResult", "Pagination", "ReadinessResponse", "SandboxSpec", "StatusResponse", "Volume", "VolumeListResponse", "VolumeSpec"]
+__all__ = ["CountPoint", "CountResponse", "CreateResponse", "Error", "ExecRequest", "ExecResponse", "ExecTarget", "FilterValuesResponse", "HealthResponse", "ListResponse", "LogLine", "LogsResponse", "LookupResult", "Pagination", "ReadinessResponse", "SandboxDomainSpec", "SandboxNetworkingSpec", "SandboxSpec", "StatusResponse", "Volume", "VolumeListResponse", "VolumeSpec"]
