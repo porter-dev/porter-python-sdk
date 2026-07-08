@@ -17,6 +17,8 @@ from porter_sandbox._models import (
     LookupResult,
     Pagination,
     ReadinessResponse,
+    SandboxDomainSpec,
+    SandboxNetworkingSpec,
     SandboxSpec,
     VolumeListResponse,
     VolumeSpec,
@@ -111,6 +113,20 @@ def test_readiness_response_round_trip() -> None:
     instance = ReadinessResponse(status="x", active_sandboxes=1)
     serialized = instance.model_dump(by_alias=True, exclude_none=True)
     round_tripped = ReadinessResponse.model_validate(serialized)
+    assert round_tripped.model_dump(by_alias=True, exclude_none=True) == serialized
+
+
+def test_sandbox_domain_spec_round_trip() -> None:
+    instance = SandboxDomainSpec()
+    serialized = instance.model_dump(by_alias=True, exclude_none=True)
+    round_tripped = SandboxDomainSpec.model_validate(serialized)
+    assert round_tripped.model_dump(by_alias=True, exclude_none=True) == serialized
+
+
+def test_sandbox_networking_spec_round_trip() -> None:
+    instance = SandboxNetworkingSpec(port=1)
+    serialized = instance.model_dump(by_alias=True, exclude_none=True)
+    round_tripped = SandboxNetworkingSpec.model_validate(serialized)
     assert round_tripped.model_dump(by_alias=True, exclude_none=True) == serialized
 
 
