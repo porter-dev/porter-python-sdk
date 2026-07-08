@@ -24,10 +24,23 @@ with Porter() as porter:
     sb.terminate()
 ```
 
-Set `PORTER_SANDBOX_API_KEY` in your environment.
-By default, the SDK connects to Porter's in-cluster sandbox API at
-`http://sandbox-api.porter-sandbox-system.svc.cluster.local:8080`. Override it
-with `PORTER_SANDBOX_BASE_URL` or by passing `base_url`.
+Inside a sandbox-enabled Porter cluster, the SDK connects to the in-cluster
+sandbox API at `http://sandbox-api.porter-sandbox-system.svc.cluster.local:8080`
+automatically, with no configuration needed.
+
+From outside the cluster, set a Porter API token (created from
+**Settings > API tokens** in the Porter Dashboard) and the cluster where
+sandboxes are enabled:
+
+```bash
+export PORTER_SANDBOX_API_KEY=<porter-api-token>
+export PORTER_CLUSTER_ID=<cluster-id>
+```
+
+The SDK reads the project from the token and calls the sandbox API through the
+Porter API at `dashboard.porter.run`. To target a specific URL instead, set
+`PORTER_SANDBOX_BASE_URL` or pass `base_url` - both take precedence over
+everything above.
 
 ### Async
 
