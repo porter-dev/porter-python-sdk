@@ -21,6 +21,11 @@ class LogLineLevel(str, Enum):
     INFO = "info"
 
 
+class SandboxDomainSpecVisibility(str, Enum):
+    PUBLIC = "public"
+    PRIVATE = "private"
+
+
 class SandboxesPhase(str, Enum):
     QUEUED = "queued"
     CREATING = "creating"
@@ -45,4 +50,4 @@ class VolumePhase(str, Enum):
     FAILED = "failed"
 
 
-__all__ = ["FilterValuesResponsePhases", "LogLineLevel", "SandboxesPhase", "StatusResponsePhase", "VolumePhase"]
+__all__ = ["FilterValuesResponsePhases", "LogLineLevel", "SandboxDomainSpecVisibility", "SandboxesPhase", "StatusResponsePhase", "VolumePhase"]
