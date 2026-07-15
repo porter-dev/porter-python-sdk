@@ -5,9 +5,10 @@ from collections.abc import Mapping
 from typing import Any
 
 import httpx
+from httpx._client import UseClientDefault
 
 from ._config import Config
-from ._errors import SandboxError, error_for_status
+from ._errors import SandboxError, SandboxTimeoutError, error_for_status
 from ._retries import DEFAULT_MAX_RETRIES, should_retry, sleep_for_attempt_sync
 
 USER_AGENT = "porter-sandbox-python/0.0.1"
@@ -75,20 +76,34 @@ class _BaseClient:
         path: str,
         params: Mapping[str, Any] | None = None,
         json: Any = None,
+        timeout: float | None | UseClientDefault = httpx.USE_CLIENT_DEFAULT,
+        retry: bool = True,
     ) -> Any:
+        # `timeout=None` disables the timeout entirely, used for long-running
+        # calls like exec, where the API works for the full duration of the
+        # request. `retry=False` is for calls that must not be re-sent (exec):
+        # a failed attempt may have executed server-side, so retrying could
+        # run the command again.
+        max_retries = self._max_retries if retry else 0
         last_error: Exception | None = None
 
-        for attempt in range(self._max_retries + 1):
+        for attempt in range(max_retries + 1):
             try:
                 response = self._http.request(
                     method=method,
                     url=path,
                     params=params,
                     json=json,
+                    timeout=timeout,
                 )
+            except httpx.TimeoutException as exc:
+                # A timed-out request may have executed server-side, so
+                # retrying could run it again. Surface the timeout instead.
+                effective = self._config.timeout if timeout is httpx.USE_CLIENT_DEFAULT else timeout
+                raise SandboxTimeoutError(f"Request timed out after {effective}s") from exc
             except httpx.HTTPError as exc:
                 last_error = exc
-                if attempt < self._max_retries:
+                if attempt < max_retries:
                     sleep_for_attempt_sync(attempt)
                     continue
                 raise SandboxError(f"Network error: {exc}") from exc
@@ -96,7 +111,7 @@ class _BaseClient:
             if 200 <= response.status_code < 300:
                 return _decode_body(response)
 
-            if should_retry(response.status_code) and attempt < self._max_retries:
+            if should_retry(response.status_code) and attempt < max_retries:
                 sleep_for_attempt_sync(attempt)
                 continue
 

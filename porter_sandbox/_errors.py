@@ -30,6 +30,14 @@ class ServerError(SandboxError):
     """Raised on 5xx responses from the API."""
 
 
+class SandboxTimeoutError(SandboxError):
+    """Raised when a request exceeds its timeout.
+
+    Never retried by the client: the server may still be executing the request
+    (e.g. a long-running exec), so a retry could run it again.
+    """
+
+
 def error_for_status(status_code: int, body: object | None, message: str) -> SandboxError:
     """Map an HTTP status code to the appropriate SandboxError subclass."""
     if status_code == 401:

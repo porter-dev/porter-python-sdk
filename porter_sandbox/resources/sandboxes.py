@@ -146,14 +146,14 @@ class Sandboxes:
         response = self._client._request(method="GET", path=path, params=params)
         return _coerce(LogsResponse, response)
 
-    def exec_sandbox(self, id: str, body: ExecRequest) -> ExecResponse:
+    def exec_sandbox(self, id: str, body: ExecRequest, timeout: float | None = None) -> ExecResponse:
         """
         Exec in sandbox
 
         Run a command in a running sandbox and return its output and exit code
         """
         path = f"/v1/sandbox/{id}/exec"
-        response = self._client._request(method="POST", path=path, json=body.model_dump(by_alias=True, exclude_none=True) if hasattr(body, "model_dump") else body)
+        response = self._client._request(method="POST", path=path, json=body.model_dump(by_alias=True, exclude_none=True) if hasattr(body, "model_dump") else body, timeout=timeout, retry=False)
         return _coerce(ExecResponse, response)
 
 
@@ -273,12 +273,12 @@ class AsyncSandboxes:
         response = await self._client._request(method="GET", path=path, params=params)
         return _coerce(LogsResponse, response)
 
-    async def exec_sandbox(self, id: str, body: ExecRequest) -> ExecResponse:
+    async def exec_sandbox(self, id: str, body: ExecRequest, timeout: float | None = None) -> ExecResponse:
         """
         Exec in sandbox
 
         Run a command in a running sandbox and return its output and exit code
         """
         path = f"/v1/sandbox/{id}/exec"
-        response = await self._client._request(method="POST", path=path, json=body.model_dump(by_alias=True, exclude_none=True) if hasattr(body, "model_dump") else body)
+        response = await self._client._request(method="POST", path=path, json=body.model_dump(by_alias=True, exclude_none=True) if hasattr(body, "model_dump") else body, timeout=timeout, retry=False)
         return _coerce(ExecResponse, response)
