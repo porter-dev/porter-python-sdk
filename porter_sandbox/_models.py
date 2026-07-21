@@ -110,8 +110,10 @@ class SandboxSpec(BaseModel):
     command: list[str] | None = Field(default=None, description="Override image entrypoint")
     args: list[str] | None = Field(default=None, description="Arguments passed to the command")
     env: dict[str, str] | None = Field(default=None, description="Environment variables to set in the sandbox, keyed by name")
+    env_groups: list[str] | None = Field(default=None, description="Names of environment groups on the cluster whose variables are\ninjected into the sandbox, resolved to their latest version at create\ntime. On a key conflict a later group wins over an earlier one, and\nan explicit env entry wins over any group value.\n")
     volume_mounts: dict[str, str] | None = Field(default=None, description="Volumes to mount, keyed by the absolute mount path inside the\nsandbox; values are volume IDs.\n")
     networking: list[SandboxNetworkingSpec] | None = Field(default=None, description="Network exposure for the sandbox. Omit to expose nothing. Currently\nonly one entry is supported.\n")
+    ttl_seconds: int | None = Field(default=None, description="Maximum lifetime in seconds, counted from creation. The sandbox is\nterminated once it elapses. Omit for no limit.\n")
 
 
 class StatusResponse(BaseModel):

@@ -32,8 +32,10 @@ class Sandboxes:
         command: list[str] | None = None,
         args: list[str] | None = None,
         env: dict[str, str] | None = None,
+        env_groups: list[str] | None = None,
         volume_mounts: dict[str, str] | None = None,
         networking: list[SandboxNetworkingSpec] | None = None,
+        ttl_seconds: int | None = None,
     ) -> Sandbox:
         spec = SandboxSpec(
             image=image,
@@ -42,8 +44,10 @@ class Sandboxes:
             command=command,
             args=args,
             env=env,
+            env_groups=env_groups,
             volume_mounts=volume_mounts,
             networking=networking,
+            ttl_seconds=ttl_seconds,
         )
         created = self._resource.create_sandbox(body=spec)
         return Sandbox(id=created.id, resource=self._resource)
@@ -90,8 +94,10 @@ class AsyncSandboxes:
         command: list[str] | None = None,
         args: list[str] | None = None,
         env: dict[str, str] | None = None,
+        env_groups: list[str] | None = None,
         volume_mounts: dict[str, str] | None = None,
         networking: list[SandboxNetworkingSpec] | None = None,
+        ttl_seconds: int | None = None,
     ) -> AsyncSandbox:
         spec = SandboxSpec(
             image=image,
@@ -100,8 +106,10 @@ class AsyncSandboxes:
             command=command,
             args=args,
             env=env,
+            env_groups=env_groups,
             volume_mounts=volume_mounts,
             networking=networking,
+            ttl_seconds=ttl_seconds,
         )
         created = await self._resource.create_sandbox(body=spec)
         return AsyncSandbox(id=created.id, resource=self._resource)
