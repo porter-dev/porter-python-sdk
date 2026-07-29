@@ -58,6 +58,10 @@ class _BaseClient:
             timeout=config.timeout,
             verify=verify,
             headers=headers,
+            # Some endpoints redirect to the service that owns the data. httpx
+            # does not follow redirects by default, so callers would get the
+            # 3xx instead of the response.
+            follow_redirects=True,
         )
 
     def __enter__(self) -> _BaseClient:
