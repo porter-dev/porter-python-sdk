@@ -95,6 +95,14 @@ class Volume:
         return self._record.phase
 
     @property
+    def path(self) -> str:
+        """Subdirectory, relative to the shared sandbox volumes mount, where this
+        volume's data lives. An app that mounts the cluster's sandbox volumes
+        reads this volume at `<mount>/<path>`.
+        """
+        return self._record.path
+
+    @property
     def attached_to(self) -> builtins.list[str]:
         """IDs of the sandboxes the volume is attached to."""
         return self._record.attached_to
@@ -238,6 +246,14 @@ class AsyncVolume:
     @property
     def phase(self) -> VolumePhase:
         return self._record.phase
+
+    @property
+    def path(self) -> str:
+        """Subdirectory, relative to the shared sandbox volumes mount, where this
+        volume's data lives. An app that mounts the cluster's sandbox volumes
+        reads this volume at `<mount>/<path>`.
+        """
+        return self._record.path
 
     @property
     def attached_to(self) -> builtins.list[str]:
