@@ -58,6 +58,10 @@ class _AsyncBaseClient:
             timeout=config.timeout,
             verify=verify,
             headers=headers,
+            # Some endpoints redirect to the service that owns the data. httpx
+            # does not follow redirects by default, so callers would get the
+            # 3xx instead of the response.
+            follow_redirects=True,
         )
 
     async def __aenter__(self) -> _AsyncBaseClient:
