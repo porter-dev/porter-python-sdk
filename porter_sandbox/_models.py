@@ -10,6 +10,7 @@ from .enums import (
     LogLineLevel,
     SandboxDomainSpecVisibility,
     StatusResponsePhase,
+    VolumeFileEntryType,
     VolumePhase,
 )
 
@@ -98,6 +99,10 @@ class SandboxDomainSpec(BaseModel):
     visibility: SandboxDomainSpecVisibility | None = Field(default=None, description="Which sandbox ingress serves the domain when the cluster has both a\npublic and a private one. Omit to default to whichever is\nconfigured, public winning. Rejected when the sandbox exposes a\nport but the requested ingress is not configured on the cluster.\n")
 
 
+class SandboxEgressSpec(BaseModel):
+    allowed_destinations: list[str] = Field(description="Destinations the sandbox may reach; all other outbound traffic is\ndenied. An entry is a hostname (api.example.com), a wildcard\n(*.example.com) matching any host under that domain but not the\ndomain itself, an IP literal, a CIDR range (203.0.113.0/24), or the\ncluster-internal hostname of a Service on the sandbox's cluster\n(name.namespace.svc.cluster.local), which allows the Service's\nbacking pods as they change. Enforcement is transparent at the\nnetwork layer, so any protocol and client works without proxy\nconfiguration. An empty list denies all egress; omit egress entirely\nto leave the sandbox's internet access unrestricted.\n")
+
+
 class SandboxNetworkingSpec(BaseModel):
     port: int = Field(description="Port the workload listens on; the per-sandbox Service targets it on\nthe pod. Privileged ports (1-1023) are not allowed.\n")
     domains: list[SandboxDomainSpec] | None = Field(default=None, description="Domains the port is served on through a sandbox ingress. Omit to\nserve the port at the default hostname through the default ingress.\nCurrently only one entry is supported.\n")
@@ -113,6 +118,7 @@ class SandboxSpec(BaseModel):
     env_groups: list[str] | None = Field(default=None, description="Names of environment groups on the cluster whose variables are\ninjected into the sandbox, resolved to their latest version at create\ntime. On a key conflict a later group wins over an earlier one, and\nan explicit env entry wins over any group value.\n")
     volume_mounts: dict[str, str] | None = Field(default=None, description="Volumes to mount, keyed by the absolute mount path inside the\nsandbox; values are volume IDs.\n")
     networking: list[SandboxNetworkingSpec] | None = Field(default=None, description="Network exposure for the sandbox. Omit to expose nothing. Currently\nonly one entry is supported.\n")
+    egress: SandboxEgressSpec | None = Field(default=None)
     ttl_seconds: int | None = Field(default=None, description="Maximum lifetime in seconds, counted from creation. The sandbox is\nterminated once it elapses. Omit for no limit.\n")
 
 
@@ -133,9 +139,25 @@ class StatusResponse(BaseModel):
 class Volume(BaseModel):
     id: str = Field(description="Volume ID, assigned when the volume is created. All volume\noperations address volumes by ID; the name is informational.\n")
     name: str = Field(description="Volume name")
+    path: str = Field(description="Subdirectory, relative to the shared sandbox volumes mount, where this\nvolume's data lives. An app that mounts the cluster's sandbox volumes\nreads this volume at <mount>/<path>.\n")
     phase: VolumePhase = Field(description="Current lifecycle phase of the volume")
     attached_to: list[str] = Field(description="IDs of sandboxes the volume is attached to")
     created_at: str = Field(description="When the volume was created")
+
+
+class VolumeFileEntry(BaseModel):
+    name: str = Field(description="Entry name within its parent directory, without any path separator\n(e.g. model.bin). Entries nest, so a directory name is carried once\non the directory itself rather than repeated in the path of every\nentry beneath it. Reconstruct an entry's path relative to the volume\nroot by joining the names from the listing's path down to the entry.\n")
+    type: VolumeFileEntryType = Field(description="Whether the entry is a regular file or a directory")
+    size_bytes: int = Field(description="Size of the entry in bytes. Zero for directories.")
+    modified_at: str | None = Field(default=None, description="When the entry was last modified. Always set on files; may be absent\non directories when the volume's storage keeps no directory\nmodification time.\n")
+    truncated: bool | None = Field(default=None, description="Set on a directory entry whose contents the walk did not fully read:\nthe entry budget ran out before entering it, or the directory alone\nholds more entries than the budget. List the directory directly to\nread more of them. Never set on files.\n")
+    entries: list[VolumeFileEntry] | None = Field(default=None, description="Entries directly inside this directory, directories before files and\neach group by name. Omitted on files, and on a directory whose\nentries the walk did not read (which carries truncated instead).\n")
+
+
+class VolumeFileListResponse(BaseModel):
+    path: str = Field(description="The walked directory, relative to the volume root")
+    entries: list[VolumeFileEntry] = Field(description="Entries directly inside the walked directory, directories before\nfiles and each group by name. Entries nest, so everything the walk\nread below this level hangs off these entries rather than appearing\nhere as a flat path.\n")
+    truncated: bool = Field(description="Whether the walk stopped at its entry budget before reading every\nentry. Directories left unread or partially read carry their own\ntruncated marker.\n")
 
 
 class VolumeListResponse(BaseModel):
@@ -146,4 +168,4 @@ class VolumeSpec(BaseModel):
     name: str | None = Field(default=None, description="Volume name, unique within the cluster. Must be a valid DNS label\n(lowercase alphanumeric and dashes). Defaults to the volume's id\nwhen omitted.\n")
 
 
-__all__ = ["CountPoint", "CountResponse", "CreateResponse", "Error", "ExecRequest", "ExecResponse", "ExecTarget", "FilterValuesResponse", "HealthResponse", "ListResponse", "LogLine", "LogsResponse", "LookupResult", "Pagination", "ReadinessResponse", "SandboxDomainSpec", "SandboxNetworkingSpec", "SandboxSpec", "StatusResponse", "Volume", "VolumeListResponse", "VolumeSpec"]
+__all__ = ["CountPoint", "CountResponse", "CreateResponse", "Error", "ExecRequest", "ExecResponse", "ExecTarget", "FilterValuesResponse", "HealthResponse", "ListResponse", "LogLine", "LogsResponse", "LookupResult", "Pagination", "ReadinessResponse", "SandboxDomainSpec", "SandboxEgressSpec", "SandboxNetworkingSpec", "SandboxSpec", "StatusResponse", "Volume", "VolumeFileEntry", "VolumeFileListResponse", "VolumeListResponse", "VolumeSpec"]

@@ -9,7 +9,8 @@ from pydantic import BaseModel
 
 from .._async_base_client import _AsyncBaseClient
 from .._base_client import _BaseClient
-from .._models import LookupResult, Volume, VolumeListResponse, VolumeSpec
+from .._binary import BinaryContent
+from .._models import LookupResult, Volume, VolumeFileListResponse, VolumeListResponse, VolumeSpec
 
 _M = TypeVar("_M", bound=BaseModel)
 
@@ -78,6 +79,42 @@ class Volumes:
         self._client._request(method="DELETE", path=path)
         return None
 
+    def list_volume_files(self, id: str, path: str | None = None, search: str | None = None) -> VolumeFileListResponse:
+        """
+        List volume files
+
+        List the files and directories under a path inside a volume, read from
+        the shared sandbox volumes mount. The listing walks the tree
+        breadth-first up to a server-side entry budget: small trees come back
+        complete in one response, and directories the walk did not fully read
+        are marked truncated for clients to list directly. Requires the control
+        plane to have the mount configured; without it every listing reports
+        the files API as unavailable.
+        """
+        path_ = f"/v1/volume/{id}/files"
+        params: dict[str, Any] = {}
+        if path is not None:
+            params["path"] = path
+        if search is not None:
+            params["search"] = search
+        response = self._client._request(method="GET", path=path_, params=params)
+        return _coerce(VolumeFileListResponse, response)
+
+    def read_volume_file(self, id: str, path: str, range: str | None = None) -> BinaryContent:
+        """
+        Read volume file
+
+        Stream a file's raw bytes from a volume. The response is the file
+        content itself, so clients bound how much they read: send a single
+        byte range (e.g. bytes=0-1048575) to read part of the file, or omit
+        the Range header for the whole file.
+        """
+        path_ = f"/v1/volume/{id}/files/content"
+        params: dict[str, Any] = {}
+        params["path"] = path
+        response: BinaryContent = self._client._request_binary(method="GET", path=path_, params=params, headers={"Range": range})
+        return response
+
 
 class AsyncVolumes:
     """Volumes resource."""
@@ -137,3 +174,39 @@ class AsyncVolumes:
         path = f"/v1/volume/{id}"
         await self._client._request(method="DELETE", path=path)
         return None
+
+    async def list_volume_files(self, id: str, path: str | None = None, search: str | None = None) -> VolumeFileListResponse:
+        """
+        List volume files
+
+        List the files and directories under a path inside a volume, read from
+        the shared sandbox volumes mount. The listing walks the tree
+        breadth-first up to a server-side entry budget: small trees come back
+        complete in one response, and directories the walk did not fully read
+        are marked truncated for clients to list directly. Requires the control
+        plane to have the mount configured; without it every listing reports
+        the files API as unavailable.
+        """
+        path_ = f"/v1/volume/{id}/files"
+        params: dict[str, Any] = {}
+        if path is not None:
+            params["path"] = path
+        if search is not None:
+            params["search"] = search
+        response = await self._client._request(method="GET", path=path_, params=params)
+        return _coerce(VolumeFileListResponse, response)
+
+    async def read_volume_file(self, id: str, path: str, range: str | None = None) -> BinaryContent:
+        """
+        Read volume file
+
+        Stream a file's raw bytes from a volume. The response is the file
+        content itself, so clients bound how much they read: send a single
+        byte range (e.g. bytes=0-1048575) to read part of the file, or omit
+        the Range header for the whole file.
+        """
+        path_ = f"/v1/volume/{id}/files/content"
+        params: dict[str, Any] = {}
+        params["path"] = path
+        response: BinaryContent = await self._client._request_binary(method="GET", path=path_, params=params, headers={"Range": range})
+        return response
