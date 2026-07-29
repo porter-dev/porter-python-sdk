@@ -24,6 +24,27 @@ with Porter() as porter:
     sb.terminate()
 ```
 
+Volumes can be created up front and mounted into sandboxes at launch, and their
+contents browsed and read straight from the volume handle:
+
+```python
+volume = porter.volumes.create(name="my-data")
+
+sb = porter.sandboxes.create(
+    image="python:3.11-alpine",
+    volume_mounts={"/mnt/my-data": volume.id},
+)
+
+for file in volume.listdir("/checkpoints"):
+    print(file.path, file.size_bytes)
+
+config = volume.read_text("/checkpoints/config.json")
+
+with open("model.safetensors", "wb") as out:
+    for chunk in volume.stream("/checkpoints/model.safetensors"):
+        out.write(chunk)
+```
+
 Inside a sandbox-enabled Porter cluster, the SDK connects to the in-cluster
 sandbox API at `http://sandbox-api.porter-sandbox-system.svc.cluster.local:8080`
 automatically, with no configuration needed.
@@ -70,10 +91,13 @@ async with AsyncPorter() as porter:
 
 ## Layout
 
-- `porter_sandbox/porter.py`, resource namespace modules like `porter_sandbox/sandboxes.py`, `porter_sandbox/_client.py`, `_models.py`, `enums.py`, `_errors.py`, `resources/` — generated from the [sandbox-api OpenAPI spec](https://github.com/porter-dev/workstation/tree/main/code/sandbox/schemas) via the [sdk-gen workspace](https://github.com/porter-dev/workstation/tree/main/code/sandbox/sdk-gen). Do not edit by hand.
-- `porter_sandbox/sandbox.py` — hand-written rich sandbox handle used by the generated `sandboxes` namespace
-- `porter_sandbox/_base_client.py` / `_async_base_client.py` — hand-written sync and async HTTP transports
-- `porter_sandbox/_config.py`, `_retries.py` — hand-written runtime (env-var resolution, retry/backoff)
+Everything under `porter_sandbox/` is generated from the Porter Sandbox OpenAPI
+spec. Do not edit it by hand - changes there are overwritten on the next release.
+
+- `porter_sandbox/sandbox.py`, `porter_sandbox/volume.py` - sync and async `Sandbox` and `Volume` handles
+- `porter_sandbox/porter.py` and resource namespace modules like `porter_sandbox/sandboxes.py` - public client and namespaces
+- `porter_sandbox/_client.py`, `_models.py`, `enums.py`, `_errors.py`, `resources/` - low-level client, models, and errors
+- `porter_sandbox/_base_client.py`, `_async_base_client.py`, `_config.py`, `_retries.py` - sync and async HTTP transports, env-var resolution, retry/backoff
 
 ## Development
 
@@ -82,10 +106,4 @@ pip install -e ".[dev]"
 pytest
 ruff check .
 mypy
-```
-
-To pull in a fresh generation from the sdk-gen workspace:
-
-```bash
-./scripts/sync-generated.sh /path/to/workstation/code/sandbox/sdk-gen/out/python
 ```

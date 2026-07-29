@@ -3,9 +3,12 @@
 
 from __future__ import annotations
 
-from porter_sandbox._models import Volume, VolumeListResponse, VolumeSpec
+import builtins
+
+from porter_sandbox._models import VolumeSpec
 from porter_sandbox.resources.volumes import AsyncVolumes as AsyncVolumesResource
 from porter_sandbox.resources.volumes import Volumes as VolumesResource
+from porter_sandbox.volume import AsyncVolume, Volume
 
 
 class Volumes:
@@ -27,14 +30,17 @@ class Volumes:
         spec = VolumeSpec(
             name=name,
         )
-        return self._resource.create_volume(body=spec)
+        record = self._resource.create_volume(body=spec)
+        return Volume(record=record, resource=self._resource)
 
-    def list(self) -> VolumeListResponse:
-        return self._resource.list_volumes()
+    def list(self) -> builtins.list[Volume]:
+        response = self._resource.list_volumes()
+        return [Volume(record=r, resource=self._resource) for r in response.volumes]
 
     def get(self, name: str) -> Volume:
         ref = self._resource.lookup_volume(name=name)
-        return self._resource.get_volume(id=ref.id)
+        record = self._resource.get_volume(id=ref.id)
+        return Volume(record=record, resource=self._resource)
 
     def delete(self, name: str) -> None:
         ref = self._resource.lookup_volume(name=name)
@@ -57,18 +63,21 @@ class AsyncVolumes:
         self,
         *,
         name: str | None = None,
-    ) -> Volume:
+    ) -> AsyncVolume:
         spec = VolumeSpec(
             name=name,
         )
-        return await self._resource.create_volume(body=spec)
+        record = await self._resource.create_volume(body=spec)
+        return AsyncVolume(record=record, resource=self._resource)
 
-    async def list(self) -> VolumeListResponse:
-        return await self._resource.list_volumes()
+    async def list(self) -> builtins.list[AsyncVolume]:
+        response = await self._resource.list_volumes()
+        return [AsyncVolume(record=r, resource=self._resource) for r in response.volumes]
 
-    async def get(self, name: str) -> Volume:
+    async def get(self, name: str) -> AsyncVolume:
         ref = await self._resource.lookup_volume(name=name)
-        return await self._resource.get_volume(id=ref.id)
+        record = await self._resource.get_volume(id=ref.id)
+        return AsyncVolume(record=record, resource=self._resource)
 
     async def delete(self, name: str) -> None:
         ref = await self._resource.lookup_volume(name=name)

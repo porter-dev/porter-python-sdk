@@ -18,8 +18,10 @@ from porter_sandbox._models import (
     Pagination,
     ReadinessResponse,
     SandboxDomainSpec,
+    SandboxEgressSpec,
     SandboxNetworkingSpec,
     SandboxSpec,
+    VolumeFileListResponse,
     VolumeListResponse,
     VolumeSpec,
 )
@@ -123,6 +125,13 @@ def test_sandbox_domain_spec_round_trip() -> None:
     assert round_tripped.model_dump(by_alias=True, exclude_none=True) == serialized
 
 
+def test_sandbox_egress_spec_round_trip() -> None:
+    instance = SandboxEgressSpec(allowed_destinations=[])
+    serialized = instance.model_dump(by_alias=True, exclude_none=True)
+    round_tripped = SandboxEgressSpec.model_validate(serialized)
+    assert round_tripped.model_dump(by_alias=True, exclude_none=True) == serialized
+
+
 def test_sandbox_networking_spec_round_trip() -> None:
     instance = SandboxNetworkingSpec(port=1)
     serialized = instance.model_dump(by_alias=True, exclude_none=True)
@@ -134,6 +143,13 @@ def test_sandbox_spec_round_trip() -> None:
     instance = SandboxSpec(image="x")
     serialized = instance.model_dump(by_alias=True, exclude_none=True)
     round_tripped = SandboxSpec.model_validate(serialized)
+    assert round_tripped.model_dump(by_alias=True, exclude_none=True) == serialized
+
+
+def test_volume_file_list_response_round_trip() -> None:
+    instance = VolumeFileListResponse(path="x", entries=[], truncated=True)
+    serialized = instance.model_dump(by_alias=True, exclude_none=True)
+    round_tripped = VolumeFileListResponse.model_validate(serialized)
     assert round_tripped.model_dump(by_alias=True, exclude_none=True) == serialized
 
 

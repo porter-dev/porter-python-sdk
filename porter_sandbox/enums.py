@@ -44,10 +44,15 @@ class StatusResponsePhase(str, Enum):
     TERMINATED = "terminated"
 
 
+class VolumeFileEntryType(str, Enum):
+    FILE = "file"
+    DIRECTORY = "directory"
+
+
 class VolumePhase(str, Enum):
     PENDING = "pending"
     READY = "ready"
     FAILED = "failed"
 
 
-__all__ = ["FilterValuesResponsePhases", "LogLineLevel", "SandboxDomainSpecVisibility", "SandboxesPhase", "StatusResponsePhase", "VolumePhase"]
+__all__ = ["FilterValuesResponsePhases", "LogLineLevel", "SandboxDomainSpecVisibility", "SandboxesPhase", "StatusResponsePhase", "VolumeFileEntryType", "VolumePhase"]
