@@ -66,6 +66,8 @@ class _AsyncBaseClient:
         path: str,
         params: Mapping[str, Any] | None = None,
         json: Any = None,
+        content: bytes | None = None,
+        content_type: str | None = None,
         headers: Mapping[str, str | None] | None = None,
         timeout: float | None | UseClientDefault = httpx.USE_CLIENT_DEFAULT,
         retry: bool = True,
@@ -75,6 +77,8 @@ class _AsyncBaseClient:
             path=path,
             params=params,
             json=json,
+            content=content,
+            content_type=content_type,
             headers=headers,
             accept="application/json",
             timeout=timeout,
@@ -89,6 +93,7 @@ class _AsyncBaseClient:
         path: str,
         params: Mapping[str, Any] | None = None,
         headers: Mapping[str, str | None] | None = None,
+        timeout: float | None | UseClientDefault = httpx.USE_CLIENT_DEFAULT,
     ) -> BinaryContent:
         response = await self._send(
             method=method,
@@ -97,6 +102,7 @@ class _AsyncBaseClient:
             json=None,
             headers=headers,
             accept="application/octet-stream",
+            timeout=timeout,
         )
         return _binary_content(response)
 
@@ -109,14 +115,15 @@ class _AsyncBaseClient:
         json: Any,
         headers: Mapping[str, str | None] | None,
         accept: str,
+        content: bytes | None = None,
+        content_type: str | None = None,
         timeout: float | None | UseClientDefault = httpx.USE_CLIENT_DEFAULT,
         retry: bool = True,
     ) -> httpx.Response:
-        # `timeout=None` disables the timeout entirely, used for long-running
-        # calls like exec, where the API works for the full duration of the
-        # request. `retry=False` is for calls that must not be re-sent (exec):
-        # a failed attempt may have executed server-side, so retrying could
-        # run the command again.
+        # `timeout=None` disables the timeout, for a call the API works on for
+        # the full duration of the request. `retry=False` is for a call that
+        # must not be re-sent, because a failed attempt may have run
+        # server-side.
         max_retries = self._max_retries if retry else 0
         last_error: Exception | None = None
 
@@ -127,7 +134,8 @@ class _AsyncBaseClient:
                     url=path,
                     params=params,
                     json=json,
-                    headers=_request_headers(headers, accept),
+                    content=content,
+                    headers=_request_headers(headers, accept, content_type),
                     timeout=timeout,
                 )
             except httpx.TimeoutException as exc:

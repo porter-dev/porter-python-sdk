@@ -22,6 +22,7 @@ from porter_sandbox._models import (
     SandboxNetworkingSpec,
     SandboxSpec,
     VolumeFileListResponse,
+    VolumeFileMoveRequest,
     VolumeListResponse,
     VolumeSpec,
 )
@@ -150,6 +151,13 @@ def test_volume_file_list_response_round_trip() -> None:
     instance = VolumeFileListResponse(path="x", entries=[], truncated=True)
     serialized = instance.model_dump(by_alias=True, exclude_none=True)
     round_tripped = VolumeFileListResponse.model_validate(serialized)
+    assert round_tripped.model_dump(by_alias=True, exclude_none=True) == serialized
+
+
+def test_volume_file_move_request_round_trip() -> None:
+    instance = VolumeFileMoveRequest(from_="x", to="x")
+    serialized = instance.model_dump(by_alias=True, exclude_none=True)
+    round_tripped = VolumeFileMoveRequest.model_validate(serialized)
     assert round_tripped.model_dump(by_alias=True, exclude_none=True) == serialized
 
 

@@ -36,6 +36,7 @@ from ._models import (
     StatusResponse,
     VolumeFileEntry,
     VolumeFileListResponse,
+    VolumeFileMoveRequest,
     VolumeListResponse,
     VolumeSpec,
 )
@@ -110,6 +111,7 @@ __all__ = [
     "VolumeFileEntry",
     "VolumeFileEntryType",
     "VolumeFileListResponse",
+    "VolumeFileMoveRequest",
     "VolumeListResponse",
     "VolumePhase",
     "VolumeRecord",
