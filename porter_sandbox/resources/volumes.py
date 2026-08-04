@@ -10,7 +10,14 @@ from pydantic import BaseModel
 from .._async_base_client import _AsyncBaseClient
 from .._base_client import _BaseClient
 from .._binary import BinaryContent
-from .._models import LookupResult, Volume, VolumeFileListResponse, VolumeListResponse, VolumeSpec
+from .._models import (
+    LookupResult,
+    Volume,
+    VolumeFileListResponse,
+    VolumeFileMoveRequest,
+    VolumeListResponse,
+    VolumeSpec,
+)
 
 _M = TypeVar("_M", bound=BaseModel)
 
@@ -100,7 +107,7 @@ class Volumes:
         response = self._client._request(method="GET", path=path_, params=params)
         return _coerce(VolumeFileListResponse, response)
 
-    def read_volume_file(self, id: str, path: str, range: str | None = None) -> BinaryContent:
+    def read_volume_file(self, id: str, path: str, range: str | None = None, timeout: float | None = None) -> BinaryContent:
         """
         Read volume file
 
@@ -112,8 +119,39 @@ class Volumes:
         path_ = f"/v1/volume/{id}/files/content"
         params: dict[str, Any] = {}
         params["path"] = path
-        response: BinaryContent = self._client._request_binary(method="GET", path=path_, params=params, headers={"Range": range})
+        response: BinaryContent = self._client._request_binary(method="GET", path=path_, params=params, headers={"Range": range}, timeout=timeout)
         return response
+
+    def write_volume_file(self, id: str, body: bytes, path: str, timeout: float | None = None) -> None:
+        """
+        Write volume file
+
+        Write a file to a volume, replacing whatever is at the path and creating
+        parent directories as needed. The request body is the file's raw bytes,
+        of any size. The write is only visible at the path once the whole body
+        has been received, so an upload that fails partway leaves the previous
+        content in place rather than a truncated file.
+        """
+        path_ = f"/v1/volume/{id}/files/content"
+        params: dict[str, Any] = {}
+        params["path"] = path
+        self._client._request(method="PUT", path=path_, params=params, content=body, content_type="application/octet-stream", timeout=timeout)
+        return None
+
+    def move_volume_file(self, id: str, body: VolumeFileMoveRequest) -> None:
+        """
+        Move volume file
+
+        Move or rename a file or directory inside a volume. The destination is
+        the entry's full new path, so one call covers both renaming in place and
+        relocating into another directory, and a directory moves with everything
+        under it. The destination's parent directory must already exist, and a
+        move onto a path something is already at is refused rather than
+        overwriting it.
+        """
+        path = f"/v1/volume/{id}/files/move"
+        self._client._request(method="POST", path=path, json=body.model_dump(by_alias=True, exclude_none=True) if hasattr(body, "model_dump") else body)
+        return None
 
 
 class AsyncVolumes:
@@ -196,7 +234,7 @@ class AsyncVolumes:
         response = await self._client._request(method="GET", path=path_, params=params)
         return _coerce(VolumeFileListResponse, response)
 
-    async def read_volume_file(self, id: str, path: str, range: str | None = None) -> BinaryContent:
+    async def read_volume_file(self, id: str, path: str, range: str | None = None, timeout: float | None = None) -> BinaryContent:
         """
         Read volume file
 
@@ -208,5 +246,36 @@ class AsyncVolumes:
         path_ = f"/v1/volume/{id}/files/content"
         params: dict[str, Any] = {}
         params["path"] = path
-        response: BinaryContent = await self._client._request_binary(method="GET", path=path_, params=params, headers={"Range": range})
+        response: BinaryContent = await self._client._request_binary(method="GET", path=path_, params=params, headers={"Range": range}, timeout=timeout)
         return response
+
+    async def write_volume_file(self, id: str, body: bytes, path: str, timeout: float | None = None) -> None:
+        """
+        Write volume file
+
+        Write a file to a volume, replacing whatever is at the path and creating
+        parent directories as needed. The request body is the file's raw bytes,
+        of any size. The write is only visible at the path once the whole body
+        has been received, so an upload that fails partway leaves the previous
+        content in place rather than a truncated file.
+        """
+        path_ = f"/v1/volume/{id}/files/content"
+        params: dict[str, Any] = {}
+        params["path"] = path
+        await self._client._request(method="PUT", path=path_, params=params, content=body, content_type="application/octet-stream", timeout=timeout)
+        return None
+
+    async def move_volume_file(self, id: str, body: VolumeFileMoveRequest) -> None:
+        """
+        Move volume file
+
+        Move or rename a file or directory inside a volume. The destination is
+        the entry's full new path, so one call covers both renaming in place and
+        relocating into another directory, and a directory moves with everything
+        under it. The destination's parent directory must already exist, and a
+        move onto a path something is already at is refused rather than
+        overwriting it.
+        """
+        path = f"/v1/volume/{id}/files/move"
+        await self._client._request(method="POST", path=path, json=body.model_dump(by_alias=True, exclude_none=True) if hasattr(body, "model_dump") else body)
+        return None

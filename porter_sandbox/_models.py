@@ -3,7 +3,7 @@
 
 from __future__ import annotations
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, ConfigDict, Field
 
 from .enums import (
     FilterValuesResponsePhases,
@@ -160,6 +160,13 @@ class VolumeFileListResponse(BaseModel):
     truncated: bool = Field(description="Whether the walk stopped at its entry budget before reading every\nentry. Directories left unread or partially read carry their own\ntruncated marker.\n")
 
 
+class VolumeFileMoveRequest(BaseModel):
+    model_config = ConfigDict(populate_by_name=True)
+
+    from_: str = Field(alias="from", description="File or directory to move, relative to the volume root, with or\nwithout a leading slash. A directory moves with everything under it.\n")
+    to: str = Field(description="Where to move it to, relative to the volume root, with or without a\nleading slash. This is the entry's full new path rather than the\ndirectory to place it in, so a move renames and relocates in one call.\nThe parent directory must already exist.\n")
+
+
 class VolumeListResponse(BaseModel):
     volumes: list[Volume] = Field(description="All volumes in the cluster")
 
@@ -168,4 +175,4 @@ class VolumeSpec(BaseModel):
     name: str | None = Field(default=None, description="Volume name, unique within the cluster. Must be a valid DNS label\n(lowercase alphanumeric and dashes). Defaults to the volume's id\nwhen omitted.\n")
 
 
-__all__ = ["CountPoint", "CountResponse", "CreateResponse", "Error", "ExecRequest", "ExecResponse", "ExecTarget", "FilterValuesResponse", "HealthResponse", "ListResponse", "LogLine", "LogsResponse", "LookupResult", "Pagination", "ReadinessResponse", "SandboxDomainSpec", "SandboxEgressSpec", "SandboxNetworkingSpec", "SandboxSpec", "StatusResponse", "Volume", "VolumeFileEntry", "VolumeFileListResponse", "VolumeListResponse", "VolumeSpec"]
+__all__ = ["CountPoint", "CountResponse", "CreateResponse", "Error", "ExecRequest", "ExecResponse", "ExecTarget", "FilterValuesResponse", "HealthResponse", "ListResponse", "LogLine", "LogsResponse", "LookupResult", "Pagination", "ReadinessResponse", "SandboxDomainSpec", "SandboxEgressSpec", "SandboxNetworkingSpec", "SandboxSpec", "StatusResponse", "Volume", "VolumeFileEntry", "VolumeFileListResponse", "VolumeFileMoveRequest", "VolumeListResponse", "VolumeSpec"]

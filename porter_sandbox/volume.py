@@ -8,7 +8,7 @@ from collections.abc import AsyncIterator, Iterator
 from datetime import datetime
 
 from porter_sandbox._models import Volume as VolumeRecord
-from porter_sandbox._models import VolumeFileEntry
+from porter_sandbox._models import VolumeFileEntry, VolumeFileMoveRequest
 from porter_sandbox.enums import VolumeFileEntryType, VolumePhase
 from porter_sandbox.resources.volumes import AsyncVolumes as AsyncVolumesResource
 from porter_sandbox.resources.volumes import Volumes as VolumesResource
@@ -30,6 +30,15 @@ def _join_path(parent: str, name: str) -> str:
 
 def _byte_range_header(offset: int, length: int | None) -> str:
     return f"bytes={offset}-" if length is None else f"bytes={offset}-{offset + length - 1}"
+
+
+def _move_request(from_path: str, to_path: str) -> VolumeFileMoveRequest:
+    # "from" is a Python keyword, so the model names the field "from_" and
+    # aliases it. A dict keys off the alias, which is the name the model
+    # declares.
+    return VolumeFileMoveRequest.model_validate(
+        {"from": _normalize_path(from_path), "to": _normalize_path(to_path)}
+    )
 
 
 def _parse_timestamp(value: str | None) -> datetime | None:
@@ -174,6 +183,31 @@ class Volume:
     ) -> str:
         """Read a file as text."""
         return self.read_file(path, offset=offset, length=length).decode(encoding)
+
+    def write_file(self, path: str, content: bytes) -> None:
+        """Write bytes to a file, replacing whatever is there and creating parent directories as needed.
+
+        The file appears at `path` only once every byte has been written, so an
+        interrupted write leaves the previous content in place.
+        """
+        self._volumes.write_volume_file(id=self.id, body=content, path=_normalize_path(path))
+
+    def write_text(self, path: str, content: str, *, encoding: str = "utf-8") -> None:
+        """Write text to a file. See `write_file`."""
+        self.write_file(path, content.encode(encoding))
+
+    def move_file(self, from_path: str, to_path: str) -> None:
+        """Move or rename a file or directory.
+
+        `to_path` is the entry's full new path rather than a directory to place
+        it in, so the same call renames in place and relocates, and a directory
+        moves with everything under it. Nothing is replaced: a destination
+        something is already at fails and leaves the entry where it was.
+        """
+        self._volumes.move_volume_file(
+            id=self.id,
+            body=_move_request(from_path, to_path),
+        )
 
     def stream(self, path: str, *, chunk_size: int = DEFAULT_CHUNK_BYTES) -> Iterator[bytes]:
         """Read a file in chunks, so a large one never lands in memory whole.
@@ -330,6 +364,31 @@ class AsyncVolume:
     ) -> str:
         """Read a file as text."""
         return (await self.read_file(path, offset=offset, length=length)).decode(encoding)
+
+    async def write_file(self, path: str, content: bytes) -> None:
+        """Write bytes to a file, replacing whatever is there and creating parent directories as needed.
+
+        The file appears at `path` only once every byte has been written, so an
+        interrupted write leaves the previous content in place.
+        """
+        await self._volumes.write_volume_file(id=self.id, body=content, path=_normalize_path(path))
+
+    async def write_text(self, path: str, content: str, *, encoding: str = "utf-8") -> None:
+        """Write text to a file. See `write_file`."""
+        await self.write_file(path, content.encode(encoding))
+
+    async def move_file(self, from_path: str, to_path: str) -> None:
+        """Move or rename a file or directory.
+
+        `to_path` is the entry's full new path rather than a directory to place
+        it in, so the same call renames in place and relocates, and a directory
+        moves with everything under it. Nothing is replaced: a destination
+        something is already at fails and leaves the entry where it was.
+        """
+        await self._volumes.move_volume_file(
+            id=self.id,
+            body=_move_request(from_path, to_path),
+        )
 
     async def stream(
         self, path: str, *, chunk_size: int = DEFAULT_CHUNK_BYTES
