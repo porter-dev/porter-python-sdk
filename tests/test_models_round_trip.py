@@ -15,11 +15,13 @@ from porter_sandbox._models import (
     HealthResponse,
     LogsResponse,
     LookupResult,
+    MetricSummaryResponse,
     Pagination,
     ReadinessResponse,
     SandboxDomainSpec,
     SandboxEgressSpec,
     SandboxNetworkingSpec,
+    SandboxResourcesSpec,
     SandboxSpec,
     VolumeFileListResponse,
     VolumeFileMoveRequest,
@@ -105,6 +107,13 @@ def test_lookup_result_round_trip() -> None:
     assert round_tripped.model_dump(by_alias=True, exclude_none=True) == serialized
 
 
+def test_metric_summary_response_round_trip() -> None:
+    instance = MetricSummaryResponse(window_seconds=1, has_data=True, cpu_cores_p_50=1.0, cpu_cores_p_90=1.0, cpu_limit_cores=1.0, cpu_util_p_50_pct=1.0, cpu_util_p_90_pct=1.0, mem_bytes_p_50=1, mem_bytes_p_90=1, mem_limit_bytes=1, mem_util_p_50_pct=1.0, mem_util_p_90_pct=1.0)
+    serialized = instance.model_dump(by_alias=True, exclude_none=True)
+    round_tripped = MetricSummaryResponse.model_validate(serialized)
+    assert round_tripped.model_dump(by_alias=True, exclude_none=True) == serialized
+
+
 def test_pagination_round_trip() -> None:
     instance = Pagination(current_page=1, total_pages=1, has_next_page=True)
     serialized = instance.model_dump(by_alias=True, exclude_none=True)
@@ -137,6 +146,13 @@ def test_sandbox_networking_spec_round_trip() -> None:
     instance = SandboxNetworkingSpec(port=1)
     serialized = instance.model_dump(by_alias=True, exclude_none=True)
     round_tripped = SandboxNetworkingSpec.model_validate(serialized)
+    assert round_tripped.model_dump(by_alias=True, exclude_none=True) == serialized
+
+
+def test_sandbox_resources_spec_round_trip() -> None:
+    instance = SandboxResourcesSpec()
+    serialized = instance.model_dump(by_alias=True, exclude_none=True)
+    round_tripped = SandboxResourcesSpec.model_validate(serialized)
     assert round_tripped.model_dump(by_alias=True, exclude_none=True) == serialized
 
 

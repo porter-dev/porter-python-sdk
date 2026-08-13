@@ -5,7 +5,12 @@ from __future__ import annotations
 
 import builtins
 
-from porter_sandbox._models import SandboxEgressSpec, SandboxNetworkingSpec, SandboxSpec
+from porter_sandbox._models import (
+    SandboxEgressSpec,
+    SandboxNetworkingSpec,
+    SandboxResourcesSpec,
+    SandboxSpec,
+)
 from porter_sandbox.enums import SandboxesPhase
 from porter_sandbox.resources.sandboxes import AsyncSandboxes as AsyncSandboxesResource
 from porter_sandbox.resources.sandboxes import Sandboxes as SandboxesResource
@@ -36,6 +41,7 @@ class Sandboxes:
         volume_mounts: dict[str, str] | None = None,
         networking: list[SandboxNetworkingSpec] | None = None,
         egress: SandboxEgressSpec | None = None,
+        resources: SandboxResourcesSpec | None = None,
         ttl_seconds: int | None = None,
     ) -> Sandbox:
         spec = SandboxSpec(
@@ -49,6 +55,7 @@ class Sandboxes:
             volume_mounts=volume_mounts,
             networking=networking,
             egress=egress,
+            resources=resources,
             ttl_seconds=ttl_seconds,
         )
         created = self._resource.create_sandbox(body=spec)
@@ -100,6 +107,7 @@ class AsyncSandboxes:
         volume_mounts: dict[str, str] | None = None,
         networking: list[SandboxNetworkingSpec] | None = None,
         egress: SandboxEgressSpec | None = None,
+        resources: SandboxResourcesSpec | None = None,
         ttl_seconds: int | None = None,
     ) -> AsyncSandbox:
         spec = SandboxSpec(
@@ -113,6 +121,7 @@ class AsyncSandboxes:
             volume_mounts=volume_mounts,
             networking=networking,
             egress=egress,
+            resources=resources,
             ttl_seconds=ttl_seconds,
         )
         created = await self._resource.create_sandbox(body=spec)
