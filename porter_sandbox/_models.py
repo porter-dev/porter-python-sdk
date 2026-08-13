@@ -83,6 +83,24 @@ class LookupResult(BaseModel):
     id: str = Field(description="The resolved resource id")
 
 
+class MetricSummaryResponse(BaseModel):
+    """p50/p90 CPU and memory usage over a lookback window with utilization against the sandbox's limits. Memory values include page cache, so they slightly overestimate resident memory."""
+    model_config = ConfigDict(populate_by_name=True)
+
+    window_seconds: int = Field(description="Lookback window the summary was computed over.")
+    has_data: bool = Field(description="False when Prometheus returned no series for the sandbox's pod, which\nhappens for freshly-started sandboxes (Prometheus scrapes at ~1m) and\nfor pods shorter-lived than the [3m, 24h] window. When false, callers\nshould render \"no data yet\" rather than the zeroed metric fields.\n")
+    cpu_cores_p_50: float = Field(alias="cpu_cores_p50", description="50th percentile CPU usage in cores.")
+    cpu_cores_p_90: float = Field(alias="cpu_cores_p90", description="90th percentile CPU usage in cores.")
+    cpu_limit_cores: float = Field(description="CPU limit configured on the sandbox pod, in cores. Zero when no limit is set.")
+    cpu_util_p_50_pct: float = Field(alias="cpu_util_p50_pct", description="p50 CPU usage as a percentage of the CPU limit. Zero when no limit is set.")
+    cpu_util_p_90_pct: float = Field(alias="cpu_util_p90_pct", description="p90 CPU usage as a percentage of the CPU limit. Zero when no limit is set.")
+    mem_bytes_p_50: int = Field(alias="mem_bytes_p50", description="50th percentile memory usage in bytes. Includes page cache.")
+    mem_bytes_p_90: int = Field(alias="mem_bytes_p90", description="90th percentile memory usage in bytes. Includes page cache.")
+    mem_limit_bytes: int = Field(description="Memory limit configured on the sandbox pod, in bytes. Zero when no limit is set.")
+    mem_util_p_50_pct: float = Field(alias="mem_util_p50_pct", description="p50 memory usage as a percentage of the memory limit. Zero when no limit is set.")
+    mem_util_p_90_pct: float = Field(alias="mem_util_p90_pct", description="p90 memory usage as a percentage of the memory limit. Zero when no limit is set.")
+
+
 class Pagination(BaseModel):
     current_page: int = Field(description="Current page number (1-based)")
     total_pages: int = Field(description="Total number of pages")
@@ -108,6 +126,15 @@ class SandboxNetworkingSpec(BaseModel):
     domains: list[SandboxDomainSpec] | None = Field(default=None, description="Domains the port is served on through a sandbox ingress. Omit to\nserve the port at the default hostname through the default ingress.\nCurrently only one entry is supported.\n")
 
 
+class SandboxResourcesSpec(BaseModel):
+    """CPU and memory for the sandbox, as Kubernetes quantities. An omitted
+field keeps the cluster's default sandbox size for that resource. The
+sandbox can use up to the given amount.
+"""
+    cpu: str | None = Field(default=None, description="CPU cores, e.g. \"2\", \"500m\".")
+    memory: str | None = Field(default=None, description="Memory, e.g. \"2Gi\", \"512Mi\".")
+
+
 class SandboxSpec(BaseModel):
     image: str = Field(description="Container image to run")
     name: str | None = Field(default=None, description="Sandbox name, unique within the cluster. Must be a valid DNS label\n(lowercase alphanumeric and dashes). Defaults to the sandbox's id\nwhen omitted.\n")
@@ -119,6 +146,7 @@ class SandboxSpec(BaseModel):
     volume_mounts: dict[str, str] | None = Field(default=None, description="Volumes to mount, keyed by the absolute mount path inside the\nsandbox; values are volume IDs.\n")
     networking: list[SandboxNetworkingSpec] | None = Field(default=None, description="Network exposure for the sandbox. Omit to expose nothing. Currently\nonly one entry is supported.\n")
     egress: SandboxEgressSpec | None = Field(default=None)
+    resources: SandboxResourcesSpec | None = Field(default=None)
     ttl_seconds: int | None = Field(default=None, description="Maximum lifetime in seconds, counted from creation. The sandbox is\nterminated once it elapses. Omit for no limit.\n")
 
 
@@ -175,4 +203,4 @@ class VolumeSpec(BaseModel):
     name: str | None = Field(default=None, description="Volume name, unique within the cluster. Must be a valid DNS label\n(lowercase alphanumeric and dashes). Defaults to the volume's id\nwhen omitted.\n")
 
 
-__all__ = ["CountPoint", "CountResponse", "CreateResponse", "Error", "ExecRequest", "ExecResponse", "ExecTarget", "FilterValuesResponse", "HealthResponse", "ListResponse", "LogLine", "LogsResponse", "LookupResult", "Pagination", "ReadinessResponse", "SandboxDomainSpec", "SandboxEgressSpec", "SandboxNetworkingSpec", "SandboxSpec", "StatusResponse", "Volume", "VolumeFileEntry", "VolumeFileListResponse", "VolumeFileMoveRequest", "VolumeListResponse", "VolumeSpec"]
+__all__ = ["CountPoint", "CountResponse", "CreateResponse", "Error", "ExecRequest", "ExecResponse", "ExecTarget", "FilterValuesResponse", "HealthResponse", "ListResponse", "LogLine", "LogsResponse", "LookupResult", "MetricSummaryResponse", "Pagination", "ReadinessResponse", "SandboxDomainSpec", "SandboxEgressSpec", "SandboxNetworkingSpec", "SandboxResourcesSpec", "SandboxSpec", "StatusResponse", "Volume", "VolumeFileEntry", "VolumeFileListResponse", "VolumeFileMoveRequest", "VolumeListResponse", "VolumeSpec"]

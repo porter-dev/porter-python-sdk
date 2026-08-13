@@ -17,6 +17,7 @@ from .._models import (
     ListResponse,
     LogsResponse,
     LookupResult,
+    MetricSummaryResponse,
     SandboxSpec,
     StatusResponse,
 )
@@ -156,6 +157,22 @@ class Sandboxes:
         response = self._client._request(method="POST", path=path, json=body.model_dump(by_alias=True, exclude_none=True) if hasattr(body, "model_dump") else body, timeout=timeout, retry=False)
         return _coerce(ExecResponse, response)
 
+    def get_sandbox_metrics_summary(self, id: str, since: str | None = None) -> MetricSummaryResponse:
+        """
+        Get sandbox CPU and memory percentile summary
+
+        Return p50/p90 CPU and memory usage over a lookback window for the
+        sandbox, with utilization computed against the sandbox pod's limits.
+        Memory values include page cache, so they slightly overestimate
+        resident memory.
+        """
+        path = f"/v1/sandbox/{id}/metrics-summary"
+        params: dict[str, Any] = {}
+        if since is not None:
+            params["since"] = since
+        response = self._client._request(method="GET", path=path, params=params)
+        return _coerce(MetricSummaryResponse, response)
+
 
 class AsyncSandboxes:
     """Sandboxes resource."""
@@ -282,3 +299,19 @@ class AsyncSandboxes:
         path = f"/v1/sandbox/{id}/exec"
         response = await self._client._request(method="POST", path=path, json=body.model_dump(by_alias=True, exclude_none=True) if hasattr(body, "model_dump") else body, timeout=timeout, retry=False)
         return _coerce(ExecResponse, response)
+
+    async def get_sandbox_metrics_summary(self, id: str, since: str | None = None) -> MetricSummaryResponse:
+        """
+        Get sandbox CPU and memory percentile summary
+
+        Return p50/p90 CPU and memory usage over a lookback window for the
+        sandbox, with utilization computed against the sandbox pod's limits.
+        Memory values include page cache, so they slightly overestimate
+        resident memory.
+        """
+        path = f"/v1/sandbox/{id}/metrics-summary"
+        params: dict[str, Any] = {}
+        if since is not None:
+            params["since"] = since
+        response = await self._client._request(method="GET", path=path, params=params)
+        return _coerce(MetricSummaryResponse, response)
