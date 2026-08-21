@@ -11,7 +11,10 @@ from .enums import (
     SandboxDomainSpecVisibility,
     StatusResponsePhase,
     VolumeFileEntryType,
+    VolumeObjectSpecAccess,
     VolumePhase,
+    VolumeSpecType,
+    VolumeType,
 )
 
 
@@ -121,6 +124,26 @@ class SandboxEgressSpec(BaseModel):
     allowed_destinations: list[str] = Field(description="Destinations the sandbox may reach; all other outbound traffic is\ndenied. An entry is a hostname (api.example.com), a wildcard\n(*.example.com) matching any host under that domain but not the\ndomain itself, an IP literal, a CIDR range (203.0.113.0/24), or the\ncluster-internal hostname of a Service on the sandbox's cluster\n(name.namespace.svc.cluster.local), which allows the Service's\nbacking pods as they change. Enforcement is transparent at the\nnetwork layer, so any protocol and client works without proxy\nconfiguration. An empty list denies all egress; omit egress entirely\nto leave the sandbox's internet access unrestricted.\n")
 
 
+class SandboxMetricsPoint(BaseModel):
+    timestamp_utc: str = Field(description="Timestamp for the data point, in UTC.")
+    value: float = Field(description="Metric value at this timestamp.")
+
+
+class SandboxMetricsResponse(BaseModel):
+    """Time series for one sandbox metric over a range, shaped like the app metrics response so the dashboard reuses the same chart selectors."""
+    results: list[SandboxMetricsResult] = Field(description="One entry per query; this endpoint returns a single entry.")
+
+
+class SandboxMetricsResult(BaseModel):
+    series: list[SandboxMetricsSeries] = Field(description="One entry per Prometheus series, normally the single sandbox pod.")
+
+
+class SandboxMetricsSeries(BaseModel):
+    labels: dict[str, str] | None = Field(default=None, description="Prometheus labels identifying the series.")
+    unit: str | None = Field(default=None, description="Unit of the series values (e.g. cores, bytes, bytes/sec).")
+    time_series: list[SandboxMetricsPoint] = Field(description="Data points in chronological order.")
+
+
 class SandboxNetworkingSpec(BaseModel):
     port: int = Field(description="Port the workload listens on; the per-sandbox Service targets it on\nthe pod. Privileged ports (1-1023) are not allowed.\n")
     domains: list[SandboxDomainSpec] | None = Field(default=None, description="Domains the port is served on through a sandbox ingress. Omit to\nserve the port at the default hostname through the default ingress.\nCurrently only one entry is supported.\n")
@@ -147,7 +170,7 @@ class SandboxSpec(BaseModel):
     networking: list[SandboxNetworkingSpec] | None = Field(default=None, description="Network exposure for the sandbox. Omit to expose nothing. Currently\nonly one entry is supported.\n")
     egress: SandboxEgressSpec | None = Field(default=None)
     resources: SandboxResourcesSpec | None = Field(default=None)
-    ttl_seconds: int | None = Field(default=None, description="Maximum lifetime in seconds, counted from creation. The sandbox is\nterminated once it elapses. Omit for no limit.\n")
+    ttl_seconds: int | None = Field(default=None, description="Maximum lifetime in seconds, counted from when the sandbox starts\nrunning (from creation while it waits to start). The sandbox is\nterminated once it elapses. Omit for no limit.\n")
 
 
 class StatusResponse(BaseModel):
@@ -159,6 +182,7 @@ class StatusResponse(BaseModel):
     exit_code: int | None = Field(default=None, description="Exit code if completed")
     created_at: str = Field(description="When the sandbox was created")
     started_at: str | None = Field(default=None, description="When the sandbox pod started running")
+    finished_at: str | None = Field(default=None, description="When the sandbox reached a terminal phase (succeeded, failed, or terminated)")
     host: str = Field(description="Public hostname the sandbox is reachable at. Empty when the sandbox\nexposes no port or the cluster has no sandbox ingress configured.\n")
     volume_mounts: dict[str, str] | None = Field(default=None, description="Volumes the sandbox mounts, keyed by mount path")
     exec_target: ExecTarget | None = Field(default=None, description="Where a client addresses an interactive exec into the running sandbox. Absent until the sandbox has a pod.")
@@ -167,7 +191,9 @@ class StatusResponse(BaseModel):
 class Volume(BaseModel):
     id: str = Field(description="Volume ID, assigned when the volume is created. All volume\noperations address volumes by ID; the name is informational.\n")
     name: str = Field(description="Volume name")
-    path: str = Field(description="Subdirectory, relative to the shared sandbox volumes mount, where this\nvolume's data lives. An app that mounts the cluster's sandbox volumes\nreads this volume at <mount>/<path>.\n")
+    type: VolumeType = Field(description="Kind of volume. A disk volume is persistent file storage owned by\nthe volume; an object volume exposes a registered bucket.\n")
+    object: VolumeObjectSpec | None = Field(default=None)
+    path: str = Field(description="Subdirectory, relative to the shared sandbox volumes mount, where this\nvolume's data lives. An app that mounts the cluster's sandbox volumes\nreads this volume at <mount>/<path>. Empty for object volumes, which\nread straight from their bucket.\n")
     phase: VolumePhase = Field(description="Current lifecycle phase of the volume")
     attached_to: list[str] = Field(description="IDs of sandboxes the volume is attached to")
     created_at: str = Field(description="When the volume was created")
@@ -199,8 +225,16 @@ class VolumeListResponse(BaseModel):
     volumes: list[Volume] = Field(description="All volumes in the cluster")
 
 
+class VolumeObjectSpec(BaseModel):
+    bucket: str = Field(description="Bucket the volume exposes. Must be registered on the cluster.\n")
+    prefix: str | None = Field(default=None, description="Key prefix the volume is scoped to, without leading or trailing\nslashes. Sandboxes see only objects under the prefix, at paths\nrelative to it. Omit to expose the whole bucket.\n")
+    access: VolumeObjectSpecAccess | None = Field(default=None, description="How sandboxes that attach the volume can use the bucket. read_only\nforbids all writes; write_only_new_files allows only new objects, with no\noverwrites or deletes of existing ones. Defaults to read_write. A\nbucket registered with read_only accepts only read_only volumes.\n")
+
+
 class VolumeSpec(BaseModel):
     name: str | None = Field(default=None, description="Volume name, unique within the cluster. Must be a valid DNS label\n(lowercase alphanumeric and dashes). Defaults to the volume's id\nwhen omitted.\n")
+    type: VolumeSpecType | None = Field(default=None, description="Kind of volume to create. A disk volume is persistent file storage\nowned by the volume; an object volume exposes a bucket registered\non the cluster. Defaults to disk when omitted.\n")
+    object: VolumeObjectSpec | None = Field(default=None)
 
 
-__all__ = ["CountPoint", "CountResponse", "CreateResponse", "Error", "ExecRequest", "ExecResponse", "ExecTarget", "FilterValuesResponse", "HealthResponse", "ListResponse", "LogLine", "LogsResponse", "LookupResult", "MetricSummaryResponse", "Pagination", "ReadinessResponse", "SandboxDomainSpec", "SandboxEgressSpec", "SandboxNetworkingSpec", "SandboxResourcesSpec", "SandboxSpec", "StatusResponse", "Volume", "VolumeFileEntry", "VolumeFileListResponse", "VolumeFileMoveRequest", "VolumeListResponse", "VolumeSpec"]
+__all__ = ["CountPoint", "CountResponse", "CreateResponse", "Error", "ExecRequest", "ExecResponse", "ExecTarget", "FilterValuesResponse", "HealthResponse", "ListResponse", "LogLine", "LogsResponse", "LookupResult", "MetricSummaryResponse", "Pagination", "ReadinessResponse", "SandboxDomainSpec", "SandboxEgressSpec", "SandboxMetricsPoint", "SandboxMetricsResponse", "SandboxMetricsResult", "SandboxMetricsSeries", "SandboxNetworkingSpec", "SandboxResourcesSpec", "SandboxSpec", "StatusResponse", "Volume", "VolumeFileEntry", "VolumeFileListResponse", "VolumeFileMoveRequest", "VolumeListResponse", "VolumeObjectSpec", "VolumeSpec"]

@@ -7,9 +7,11 @@ import builtins
 from collections.abc import AsyncIterator, Iterator
 from datetime import datetime
 
+from porter_sandbox._binary import BinaryBody
+from porter_sandbox._errors import SandboxError
 from porter_sandbox._models import Volume as VolumeRecord
-from porter_sandbox._models import VolumeFileEntry, VolumeFileMoveRequest
-from porter_sandbox.enums import VolumeFileEntryType, VolumePhase
+from porter_sandbox._models import VolumeFileEntry, VolumeFileMoveRequest, VolumeObjectSpec
+from porter_sandbox.enums import VolumeFileEntryType, VolumePhase, VolumeType
 from porter_sandbox.resources.volumes import AsyncVolumes as AsyncVolumesResource
 from porter_sandbox.resources.volumes import Volumes as VolumesResource
 
@@ -77,19 +79,10 @@ class VolumeFile:
         return f"VolumeFile(path={self.path!r}, type={self.type!r}, size_bytes={self.size_bytes})"
 
 
-class Volume:
-    """Ergonomic handle for a single volume (sync).
+class _BaseVolume:
+    """Record-backed properties every volume handle shares."""
 
-    Constructed by `Porter().volumes`. Holds a back-reference to the generated
-    volume resource so file reads and lifecycle calls do not need a client to be
-    re-passed.
-
-    For async usage, see `AsyncVolume` (same surface, async methods).
-    """
-
-    def __init__(self, *, record: VolumeRecord, resource: VolumesResource) -> None:
-        self._record = record
-        self._volumes = resource
+    _record: VolumeRecord
 
     @property
     def id(self) -> str:
@@ -100,16 +93,13 @@ class Volume:
         return self._record.name
 
     @property
-    def phase(self) -> VolumePhase:
-        return self._record.phase
+    def type(self) -> VolumeType:
+        """Kind of volume. Use `isinstance(volume, ObjectVolume)` to narrow the handle."""
+        return self._record.type
 
     @property
-    def path(self) -> str:
-        """Subdirectory, relative to the shared sandbox volumes mount, where this
-        volume's data lives. An app that mounts the cluster's sandbox volumes
-        reads this volume at `<mount>/<path>`.
-        """
-        return self._record.path
+    def phase(self) -> VolumePhase:
+        return self._record.phase
 
     @property
     def attached_to(self) -> builtins.list[str]:
@@ -119,6 +109,30 @@ class Volume:
     @property
     def created_at(self) -> datetime | None:
         return _parse_timestamp(self._record.created_at)
+
+
+class Volume(_BaseVolume):
+    """Ergonomic handle for a single disk volume (sync).
+
+    Constructed by `Porter().volumes`. Holds a back-reference to the generated
+    volume resource so file reads and lifecycle calls do not need a client to be
+    re-passed.
+
+    For async usage, see `AsyncVolume` (same surface, async methods). Object
+    volumes get `ObjectVolume` instead, which carries no file methods.
+    """
+
+    def __init__(self, *, record: VolumeRecord, resource: VolumesResource) -> None:
+        self._record = record
+        self._volumes = resource
+
+    @property
+    def path(self) -> str:
+        """Subdirectory, relative to the shared sandbox volumes mount, where this
+        volume's data lives. An app that mounts the cluster's sandbox volumes
+        reads this volume at `<mount>/<path>`.
+        """
+        return self._record.path
 
     def refresh(self) -> VolumeRecord:
         """Refetch and cache the volume record."""
@@ -184,11 +198,14 @@ class Volume:
         """Read a file as text."""
         return self.read_file(path, offset=offset, length=length).decode(encoding)
 
-    def write_file(self, path: str, content: bytes) -> None:
+    def write_file(self, path: str, content: BinaryBody) -> None:
         """Write bytes to a file, replacing whatever is there and creating parent directories as needed.
 
         The file appears at `path` only once every byte has been written, so an
         interrupted write leaves the previous content in place.
+
+        Pass a seekable file object to stream a large upload instead of holding
+        it in memory: `volume.write_file("/big.bin", open(local_path, "rb"))`.
         """
         self._volumes.write_volume_file(id=self.id, body=content, path=_normalize_path(path))
 
@@ -258,8 +275,45 @@ class Volume:
                 yield from self.iterdir(file.path)
 
 
-class AsyncVolume:
-    """Ergonomic handle for a single volume (async).
+class ObjectVolume(_BaseVolume):
+    """Ergonomic handle for a single object volume (sync).
+
+    An object volume exposes a registered bucket, so it carries no file
+    methods: manage its contents in the bucket. For async usage, see
+    `AsyncObjectVolume`.
+    """
+
+    def __init__(self, *, record: VolumeRecord, resource: VolumesResource) -> None:
+        self._record = record
+        self._volumes = resource
+
+    @property
+    def object(self) -> VolumeObjectSpec:
+        """Bucket, key prefix, and access mode the volume exposes."""
+        spec = self._record.object
+        if spec is None:
+            raise SandboxError("volume record is missing its object spec")
+        return spec
+
+    def refresh(self) -> VolumeRecord:
+        """Refetch and cache the volume record."""
+        self._record = self._volumes.get_volume(id=self.id)
+        return self._record
+
+    def delete(self) -> None:
+        """Delete the volume. Fails while it is attached to a sandbox."""
+        self._volumes.delete_volume(id=self.id)
+
+
+def _wrap_volume(record: VolumeRecord, resource: VolumesResource) -> Volume | ObjectVolume:
+    """Pick the handle for a record's type. Anything but an object volume gets the disk handle."""
+    if record.type == VolumeType.OBJECT:
+        return ObjectVolume(record=record, resource=resource)
+    return Volume(record=record, resource=resource)
+
+
+class AsyncVolume(_BaseVolume):
+    """Ergonomic handle for a single disk volume (async).
 
     Same surface as `Volume`, but every method is awaitable and the walks are
     async iterators.
@@ -270,33 +324,12 @@ class AsyncVolume:
         self._volumes = resource
 
     @property
-    def id(self) -> str:
-        return self._record.id
-
-    @property
-    def name(self) -> str:
-        return self._record.name
-
-    @property
-    def phase(self) -> VolumePhase:
-        return self._record.phase
-
-    @property
     def path(self) -> str:
         """Subdirectory, relative to the shared sandbox volumes mount, where this
         volume's data lives. An app that mounts the cluster's sandbox volumes
         reads this volume at `<mount>/<path>`.
         """
         return self._record.path
-
-    @property
-    def attached_to(self) -> builtins.list[str]:
-        """IDs of the sandboxes the volume is attached to."""
-        return self._record.attached_to
-
-    @property
-    def created_at(self) -> datetime | None:
-        return _parse_timestamp(self._record.created_at)
 
     async def refresh(self) -> VolumeRecord:
         """Refetch and cache the volume record."""
@@ -365,11 +398,14 @@ class AsyncVolume:
         """Read a file as text."""
         return (await self.read_file(path, offset=offset, length=length)).decode(encoding)
 
-    async def write_file(self, path: str, content: bytes) -> None:
+    async def write_file(self, path: str, content: BinaryBody) -> None:
         """Write bytes to a file, replacing whatever is there and creating parent directories as needed.
 
         The file appears at `path` only once every byte has been written, so an
         interrupted write leaves the previous content in place.
+
+        Pass a seekable file object to stream a large upload instead of holding
+        it in memory: `await volume.write_file("/big.bin", open(local_path, "rb"))`.
         """
         await self._volumes.write_volume_file(id=self.id, body=content, path=_normalize_path(path))
 
@@ -441,3 +477,40 @@ class AsyncVolume:
             elif file.truncated and follow_truncated:
                 async for nested in self.iterdir(file.path):
                     yield nested
+
+
+class AsyncObjectVolume(_BaseVolume):
+    """Ergonomic handle for a single object volume (async).
+
+    Same surface as `ObjectVolume`, but every method is awaitable.
+    """
+
+    def __init__(self, *, record: VolumeRecord, resource: AsyncVolumesResource) -> None:
+        self._record = record
+        self._volumes = resource
+
+    @property
+    def object(self) -> VolumeObjectSpec:
+        """Bucket, key prefix, and access mode the volume exposes."""
+        spec = self._record.object
+        if spec is None:
+            raise SandboxError("volume record is missing its object spec")
+        return spec
+
+    async def refresh(self) -> VolumeRecord:
+        """Refetch and cache the volume record."""
+        self._record = await self._volumes.get_volume(id=self.id)
+        return self._record
+
+    async def delete(self) -> None:
+        """Delete the volume. Fails while it is attached to a sandbox."""
+        await self._volumes.delete_volume(id=self.id)
+
+
+def _wrap_async_volume(
+    record: VolumeRecord, resource: AsyncVolumesResource
+) -> AsyncVolume | AsyncObjectVolume:
+    """Pick the handle for a record's type. Anything but an object volume gets the disk handle."""
+    if record.type == VolumeType.OBJECT:
+        return AsyncObjectVolume(record=record, resource=resource)
+    return AsyncVolume(record=record, resource=resource)

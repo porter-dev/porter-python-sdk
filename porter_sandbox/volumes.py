@@ -5,10 +5,18 @@ from __future__ import annotations
 
 import builtins
 
-from porter_sandbox._models import VolumeSpec
+from porter_sandbox._models import VolumeObjectSpec, VolumeSpec
+from porter_sandbox.enums import VolumeSpecType
 from porter_sandbox.resources.volumes import AsyncVolumes as AsyncVolumesResource
 from porter_sandbox.resources.volumes import Volumes as VolumesResource
-from porter_sandbox.volume import AsyncVolume, Volume
+from porter_sandbox.volume import (
+    AsyncObjectVolume,
+    AsyncVolume,
+    ObjectVolume,
+    Volume,
+    _wrap_async_volume,
+    _wrap_volume,
+)
 
 
 class Volumes:
@@ -26,21 +34,25 @@ class Volumes:
         self,
         *,
         name: str | None = None,
-    ) -> Volume:
+        type: VolumeSpecType | None = None,
+        object: VolumeObjectSpec | None = None,
+    ) -> Volume | ObjectVolume:
         spec = VolumeSpec(
             name=name,
+            type=type,
+            object=object,
         )
         record = self._resource.create_volume(body=spec)
-        return Volume(record=record, resource=self._resource)
+        return _wrap_volume(record, self._resource)
 
-    def list(self) -> builtins.list[Volume]:
+    def list(self) -> builtins.list[Volume | ObjectVolume]:
         response = self._resource.list_volumes()
-        return [Volume(record=r, resource=self._resource) for r in response.volumes]
+        return [_wrap_volume(r, self._resource) for r in response.volumes]
 
-    def get(self, name: str) -> Volume:
+    def get(self, name: str) -> Volume | ObjectVolume:
         ref = self._resource.lookup_volume(name=name)
         record = self._resource.get_volume(id=ref.id)
-        return Volume(record=record, resource=self._resource)
+        return _wrap_volume(record, self._resource)
 
     def delete(self, name: str) -> None:
         ref = self._resource.lookup_volume(name=name)
@@ -63,21 +75,25 @@ class AsyncVolumes:
         self,
         *,
         name: str | None = None,
-    ) -> AsyncVolume:
+        type: VolumeSpecType | None = None,
+        object: VolumeObjectSpec | None = None,
+    ) -> AsyncVolume | AsyncObjectVolume:
         spec = VolumeSpec(
             name=name,
+            type=type,
+            object=object,
         )
         record = await self._resource.create_volume(body=spec)
-        return AsyncVolume(record=record, resource=self._resource)
+        return _wrap_async_volume(record, self._resource)
 
-    async def list(self) -> builtins.list[AsyncVolume]:
+    async def list(self) -> builtins.list[AsyncVolume | AsyncObjectVolume]:
         response = await self._resource.list_volumes()
-        return [AsyncVolume(record=r, resource=self._resource) for r in response.volumes]
+        return [_wrap_async_volume(r, self._resource) for r in response.volumes]
 
-    async def get(self, name: str) -> AsyncVolume:
+    async def get(self, name: str) -> AsyncVolume | AsyncObjectVolume:
         ref = await self._resource.lookup_volume(name=name)
         record = await self._resource.get_volume(id=ref.id)
-        return AsyncVolume(record=record, resource=self._resource)
+        return _wrap_async_volume(record, self._resource)
 
     async def delete(self, name: str) -> None:
         ref = await self._resource.lookup_volume(name=name)

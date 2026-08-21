@@ -32,6 +32,10 @@ from ._models import (
     ReadinessResponse,
     SandboxDomainSpec,
     SandboxEgressSpec,
+    SandboxMetricsPoint,
+    SandboxMetricsResponse,
+    SandboxMetricsResult,
+    SandboxMetricsSeries,
     SandboxNetworkingSpec,
     SandboxResourcesSpec,
     SandboxSpec,
@@ -40,6 +44,7 @@ from ._models import (
     VolumeFileListResponse,
     VolumeFileMoveRequest,
     VolumeListResponse,
+    VolumeObjectSpec,
     VolumeSpec,
 )
 from ._models import Volume as VolumeRecord
@@ -48,20 +53,25 @@ from .enums import (
     LogLineLevel,
     SandboxDomainSpecVisibility,
     SandboxesPhase,
+    SandboxMetric,
     StatusResponsePhase,
     VolumeFileEntryType,
+    VolumeObjectSpecAccess,
     VolumePhase,
+    VolumeSpecType,
+    VolumeType,
 )
 from .healthz import AsyncHealthz, Healthz
 from .porter import AsyncPorter, Porter
 from .readyz import AsyncReadyz, Readyz
 from .sandbox import AsyncSandbox, Sandbox
 from .sandboxes import AsyncSandboxes, Sandboxes
-from .volume import AsyncVolume, Volume, VolumeFile
+from .volume import AsyncObjectVolume, AsyncVolume, ObjectVolume, Volume, VolumeFile
 from .volumes import AsyncVolumes, Volumes
 
 __all__ = [
     "AsyncHealthz",
+    "AsyncObjectVolume",
     "AsyncPorter",
     "AsyncPorterSandboxApiClient",
     "AsyncReadyz",
@@ -90,6 +100,7 @@ __all__ = [
     "LookupResult",
     "MetricSummaryResponse",
     "NotFoundError",
+    "ObjectVolume",
     "Pagination",
     "Porter",
     "PorterSandboxApiClient",
@@ -101,6 +112,11 @@ __all__ = [
     "SandboxDomainSpecVisibility",
     "SandboxEgressSpec",
     "SandboxError",
+    "SandboxMetric",
+    "SandboxMetricsPoint",
+    "SandboxMetricsResponse",
+    "SandboxMetricsResult",
+    "SandboxMetricsSeries",
     "SandboxNetworkingSpec",
     "SandboxResourcesSpec",
     "SandboxSpec",
@@ -117,8 +133,12 @@ __all__ = [
     "VolumeFileListResponse",
     "VolumeFileMoveRequest",
     "VolumeListResponse",
+    "VolumeObjectSpec",
+    "VolumeObjectSpecAccess",
     "VolumePhase",
     "VolumeRecord",
     "VolumeSpec",
+    "VolumeSpecType",
+    "VolumeType",
     "Volumes",
 ]

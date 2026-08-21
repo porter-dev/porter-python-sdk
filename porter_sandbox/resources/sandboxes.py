@@ -18,10 +18,11 @@ from .._models import (
     LogsResponse,
     LookupResult,
     MetricSummaryResponse,
+    SandboxMetricsResponse,
     SandboxSpec,
     StatusResponse,
 )
-from ..enums import SandboxesPhase
+from ..enums import SandboxesPhase, SandboxMetric
 
 _M = TypeVar("_M", bound=BaseModel)
 
@@ -173,6 +174,22 @@ class Sandboxes:
         response = self._client._request(method="GET", path=path, params=params)
         return _coerce(MetricSummaryResponse, response)
 
+    def get_sandbox_metrics(self, id: str, metric: SandboxMetric, start_time_utc: str, end_time_utc: str) -> SandboxMetricsResponse:
+        """
+        Get sandbox time-series metrics
+
+        Return the time series for a single metric of the sandbox over a range,
+        queried against the cluster's Prometheus. Shaped like the app metrics
+        response so the dashboard reuses the same chart selectors.
+        """
+        path = f"/v1/sandbox/{id}/metrics"
+        params: dict[str, Any] = {}
+        params["metric"] = metric
+        params["start_time_utc"] = start_time_utc
+        params["end_time_utc"] = end_time_utc
+        response = self._client._request(method="GET", path=path, params=params)
+        return _coerce(SandboxMetricsResponse, response)
+
 
 class AsyncSandboxes:
     """Sandboxes resource."""
@@ -315,3 +332,19 @@ class AsyncSandboxes:
             params["since"] = since
         response = await self._client._request(method="GET", path=path, params=params)
         return _coerce(MetricSummaryResponse, response)
+
+    async def get_sandbox_metrics(self, id: str, metric: SandboxMetric, start_time_utc: str, end_time_utc: str) -> SandboxMetricsResponse:
+        """
+        Get sandbox time-series metrics
+
+        Return the time series for a single metric of the sandbox over a range,
+        queried against the cluster's Prometheus. Shaped like the app metrics
+        response so the dashboard reuses the same chart selectors.
+        """
+        path = f"/v1/sandbox/{id}/metrics"
+        params: dict[str, Any] = {}
+        params["metric"] = metric
+        params["start_time_utc"] = start_time_utc
+        params["end_time_utc"] = end_time_utc
+        response = await self._client._request(method="GET", path=path, params=params)
+        return _coerce(SandboxMetricsResponse, response)
