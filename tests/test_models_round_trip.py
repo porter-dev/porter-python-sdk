@@ -20,12 +20,17 @@ from porter_sandbox._models import (
     ReadinessResponse,
     SandboxDomainSpec,
     SandboxEgressSpec,
+    SandboxMetricsPoint,
+    SandboxMetricsResponse,
+    SandboxMetricsResult,
+    SandboxMetricsSeries,
     SandboxNetworkingSpec,
     SandboxResourcesSpec,
     SandboxSpec,
     VolumeFileListResponse,
     VolumeFileMoveRequest,
     VolumeListResponse,
+    VolumeObjectSpec,
     VolumeSpec,
 )
 
@@ -142,6 +147,34 @@ def test_sandbox_egress_spec_round_trip() -> None:
     assert round_tripped.model_dump(by_alias=True, exclude_none=True) == serialized
 
 
+def test_sandbox_metrics_point_round_trip() -> None:
+    instance = SandboxMetricsPoint(timestamp_utc="x", value=1.0)
+    serialized = instance.model_dump(by_alias=True, exclude_none=True)
+    round_tripped = SandboxMetricsPoint.model_validate(serialized)
+    assert round_tripped.model_dump(by_alias=True, exclude_none=True) == serialized
+
+
+def test_sandbox_metrics_response_round_trip() -> None:
+    instance = SandboxMetricsResponse(results=[])
+    serialized = instance.model_dump(by_alias=True, exclude_none=True)
+    round_tripped = SandboxMetricsResponse.model_validate(serialized)
+    assert round_tripped.model_dump(by_alias=True, exclude_none=True) == serialized
+
+
+def test_sandbox_metrics_result_round_trip() -> None:
+    instance = SandboxMetricsResult(series=[])
+    serialized = instance.model_dump(by_alias=True, exclude_none=True)
+    round_tripped = SandboxMetricsResult.model_validate(serialized)
+    assert round_tripped.model_dump(by_alias=True, exclude_none=True) == serialized
+
+
+def test_sandbox_metrics_series_round_trip() -> None:
+    instance = SandboxMetricsSeries(time_series=[])
+    serialized = instance.model_dump(by_alias=True, exclude_none=True)
+    round_tripped = SandboxMetricsSeries.model_validate(serialized)
+    assert round_tripped.model_dump(by_alias=True, exclude_none=True) == serialized
+
+
 def test_sandbox_networking_spec_round_trip() -> None:
     instance = SandboxNetworkingSpec(port=1)
     serialized = instance.model_dump(by_alias=True, exclude_none=True)
@@ -181,6 +214,13 @@ def test_volume_list_response_round_trip() -> None:
     instance = VolumeListResponse(volumes=[])
     serialized = instance.model_dump(by_alias=True, exclude_none=True)
     round_tripped = VolumeListResponse.model_validate(serialized)
+    assert round_tripped.model_dump(by_alias=True, exclude_none=True) == serialized
+
+
+def test_volume_object_spec_round_trip() -> None:
+    instance = VolumeObjectSpec(bucket="x")
+    serialized = instance.model_dump(by_alias=True, exclude_none=True)
+    round_tripped = VolumeObjectSpec.model_validate(serialized)
     assert round_tripped.model_dump(by_alias=True, exclude_none=True) == serialized
 
 

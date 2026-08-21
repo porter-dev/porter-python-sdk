@@ -7,8 +7,16 @@ import re
 from dataclasses import dataclass
 from datetime import datetime
 from email.utils import parsedate_to_datetime
+from typing import IO
 
 import httpx
+
+# The body a byte-bodied endpoint accepts.
+#
+# A retry or a redirect sends the body again, so a stream has to start over. A
+# file object must therefore be seekable, which `open(path, "rb")` gives. Pass
+# one to upload a large file without holding all of it in memory.
+BinaryBody = bytes | IO[bytes]
 
 # `bytes 0-1023/8192`. Absent on a whole-file response.
 _CONTENT_RANGE_RE = re.compile(r"^bytes (\d+)-(\d+)/(\d+)$")

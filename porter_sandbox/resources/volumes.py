@@ -9,7 +9,7 @@ from pydantic import BaseModel
 
 from .._async_base_client import _AsyncBaseClient
 from .._base_client import _BaseClient
-from .._binary import BinaryContent
+from .._binary import BinaryBody, BinaryContent
 from .._models import (
     LookupResult,
     Volume,
@@ -122,7 +122,7 @@ class Volumes:
         response: BinaryContent = self._client._request_binary(method="GET", path=path_, params=params, headers={"Range": range}, timeout=timeout)
         return response
 
-    def write_volume_file(self, id: str, body: bytes, path: str, timeout: float | None = None) -> None:
+    def write_volume_file(self, id: str, body: BinaryBody, path: str, timeout: float | None = None) -> None:
         """
         Write volume file
 
@@ -249,7 +249,7 @@ class AsyncVolumes:
         response: BinaryContent = await self._client._request_binary(method="GET", path=path_, params=params, headers={"Range": range}, timeout=timeout)
         return response
 
-    async def write_volume_file(self, id: str, body: bytes, path: str, timeout: float | None = None) -> None:
+    async def write_volume_file(self, id: str, body: BinaryBody, path: str, timeout: float | None = None) -> None:
         """
         Write volume file
 

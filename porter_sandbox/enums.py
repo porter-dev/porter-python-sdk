@@ -35,6 +35,15 @@ class SandboxesPhase(str, Enum):
     TERMINATED = "terminated"
 
 
+class SandboxMetric(str, Enum):
+    CPU_USAGE = "cpu_usage"
+    CPU_RESERVED = "cpu_reserved"
+    MEMORY_USAGE = "memory_usage"
+    MEMORY_RESERVED = "memory_reserved"
+    NETWORK_RX = "network_rx"
+    NETWORK_TX = "network_tx"
+
+
 class StatusResponsePhase(str, Enum):
     QUEUED = "queued"
     CREATING = "creating"
@@ -49,10 +58,26 @@ class VolumeFileEntryType(str, Enum):
     DIRECTORY = "directory"
 
 
+class VolumeObjectSpecAccess(str, Enum):
+    READ_WRITE = "read_write"
+    READ_ONLY = "read_only"
+    WRITE_ONLY_NEW_FILES = "write_only_new_files"
+
+
 class VolumePhase(str, Enum):
     PENDING = "pending"
     READY = "ready"
     FAILED = "failed"
 
 
-__all__ = ["FilterValuesResponsePhases", "LogLineLevel", "SandboxDomainSpecVisibility", "SandboxesPhase", "StatusResponsePhase", "VolumeFileEntryType", "VolumePhase"]
+class VolumeSpecType(str, Enum):
+    DISK = "disk"
+    OBJECT = "object"
+
+
+class VolumeType(str, Enum):
+    DISK = "disk"
+    OBJECT = "object"
+
+
+__all__ = ["FilterValuesResponsePhases", "LogLineLevel", "SandboxDomainSpecVisibility", "SandboxesPhase", "SandboxMetric", "StatusResponsePhase", "VolumeFileEntryType", "VolumeObjectSpecAccess", "VolumePhase", "VolumeSpecType", "VolumeType"]

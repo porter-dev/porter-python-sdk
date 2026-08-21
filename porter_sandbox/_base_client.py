@@ -10,12 +10,38 @@ from typing import Any
 import httpx
 from httpx._client import UseClientDefault
 
-from ._binary import BinaryContent, _binary_content
+from ._binary import BinaryBody, BinaryContent, _binary_content
 from ._config import Config
 from ._errors import SandboxError, SandboxTimeoutError, error_for_status
 from ._retries import DEFAULT_MAX_RETRIES, should_retry, sleep_for_attempt_sync
 
 USER_AGENT = "porter-sandbox-python/0.0.1"
+
+
+# httpx cannot restart a stream body on its own redirect path, so the client
+# follows redirects itself and starts the body over on each hop.
+_REDIRECT_STATUSES = frozenset({301, 302, 303, 307, 308})
+MAX_REDIRECTS = 5
+
+
+def _rewind(content: BinaryBody | None) -> None:
+    """Put a stream body back to the start, so the next send reads all of it."""
+    seek = getattr(content, "seek", None)
+    if seek is not None:
+        seek(0)
+
+
+def _origin(url: httpx.URL) -> tuple[str, str | None, int | None]:
+    """The scheme, host and port a credential belongs to."""
+    return (url.scheme, url.host, url.port)
+
+
+def _redirect_target(response: httpx.Response) -> httpx.URL | None:
+    """The URL a response redirects to, or None when it does not redirect."""
+    if response.status_code not in _REDIRECT_STATUSES:
+        return None
+    location = response.headers.get("location")
+    return response.url.join(location) if location else None
 
 
 def _decode_body(response: httpx.Response) -> Any:
@@ -75,10 +101,9 @@ class _BaseClient:
             timeout=config.timeout,
             verify=verify,
             headers=headers,
-            # Some endpoints redirect to the service that owns the data. httpx
-            # does not follow redirects by default, so callers would get the
-            # 3xx instead of the response.
-            follow_redirects=True,
+            # _send_following_redirects follows them instead, so a stream
+            # body starts over on each hop.
+            follow_redirects=False,
         )
 
     def __enter__(self) -> _BaseClient:
@@ -90,6 +115,50 @@ class _BaseClient:
     def close(self) -> None:
         self._http.close()
 
+    def _send_following_redirects(
+        self,
+        *,
+        method: str,
+        url: str,
+        params: Mapping[str, Any] | None,
+        json: Any,
+        content: BinaryBody | None,
+        headers: Mapping[str, str],
+        timeout: float | None | UseClientDefault,
+    ) -> httpx.Response:
+        """Send one attempt, and follow any redirect it answers with.
+
+        The API answers a volume file write with a 307, which keeps the method
+        and the body. A hop that leaves the origin drops the credentials that
+        were meant for that origin.
+        """
+        target: str | httpx.URL = url
+        hop_params = params
+
+        for _ in range(MAX_REDIRECTS + 1):
+            _rewind(content)
+            request = self._http.build_request(
+                method=method,
+                url=target,
+                params=hop_params,
+                json=json,
+                content=content,
+                headers=headers,
+                timeout=timeout,
+            )
+            if isinstance(target, httpx.URL) and _origin(target) != _origin(self._http.base_url):
+                request.headers.pop("Authorization", None)
+            response = self._http.send(request)
+
+            redirect = _redirect_target(response)
+            if redirect is None:
+                return response
+            # The redirect target carries its own query already.
+            hop_params = None
+            target = redirect
+
+        raise SandboxError(f"Too many redirects for {url}")
+
     def _request(
         self,
         *,
@@ -97,7 +166,7 @@ class _BaseClient:
         path: str,
         params: Mapping[str, Any] | None = None,
         json: Any = None,
-        content: bytes | None = None,
+        content: BinaryBody | None = None,
         content_type: str | None = None,
         headers: Mapping[str, str | None] | None = None,
         timeout: float | None | UseClientDefault = httpx.USE_CLIENT_DEFAULT,
@@ -146,7 +215,7 @@ class _BaseClient:
         json: Any,
         headers: Mapping[str, str | None] | None,
         accept: str,
-        content: bytes | None = None,
+        content: BinaryBody | None = None,
         content_type: str | None = None,
         timeout: float | None | UseClientDefault = httpx.USE_CLIENT_DEFAULT,
         retry: bool = True,
@@ -160,7 +229,7 @@ class _BaseClient:
 
         for attempt in range(max_retries + 1):
             try:
-                response = self._http.request(
+                response = self._send_following_redirects(
                     method=method,
                     url=path,
                     params=params,

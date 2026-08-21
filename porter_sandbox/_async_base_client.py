@@ -3,19 +3,48 @@
 
 from __future__ import annotations
 
-from collections.abc import Mapping
+from collections.abc import AsyncIterator, Mapping
 from typing import Any
 
 import httpx
 from httpx._client import UseClientDefault
 
-from ._base_client import _decode_body, _error_message, _request_headers
-from ._binary import BinaryContent, _binary_content
+from ._base_client import (
+    MAX_REDIRECTS,
+    _decode_body,
+    _error_message,
+    _origin,
+    _redirect_target,
+    _request_headers,
+    _rewind,
+)
+from ._binary import BinaryBody, BinaryContent, _binary_content
 from ._config import Config
 from ._errors import SandboxError, SandboxTimeoutError, error_for_status
 from ._retries import DEFAULT_MAX_RETRIES, should_retry, sleep_for_attempt
 
 USER_AGENT = "porter-sandbox-python/0.0.1"
+
+
+# An async client cannot send a file object directly, so a stream body is read
+# through this. The caller's file is rewound first, so each hop reads all of it.
+_STREAM_CHUNK_BYTES = 1024 * 1024
+
+
+def _as_async_stream(content: BinaryBody | None) -> Any:
+    """Wrap a file object so an async client can send it, and pass bytes through."""
+    read = getattr(content, "read", None)
+    if read is None:
+        return content
+
+    async def chunks() -> AsyncIterator[bytes]:
+        while True:
+            chunk = read(_STREAM_CHUNK_BYTES)
+            if not chunk:
+                break
+            yield chunk
+
+    return chunks()
 
 
 class _AsyncBaseClient:
@@ -44,10 +73,9 @@ class _AsyncBaseClient:
             timeout=config.timeout,
             verify=verify,
             headers=headers,
-            # Some endpoints redirect to the service that owns the data. httpx
-            # does not follow redirects by default, so callers would get the
-            # 3xx instead of the response.
-            follow_redirects=True,
+            # _send_following_redirects follows them instead, so a stream
+            # body starts over on each hop.
+            follow_redirects=False,
         )
 
     async def __aenter__(self) -> _AsyncBaseClient:
@@ -59,6 +87,50 @@ class _AsyncBaseClient:
     async def aclose(self) -> None:
         await self._http.aclose()
 
+    async def _send_following_redirects(
+        self,
+        *,
+        method: str,
+        url: str,
+        params: Mapping[str, Any] | None,
+        json: Any,
+        content: BinaryBody | None,
+        headers: Mapping[str, str],
+        timeout: float | None | UseClientDefault,
+    ) -> httpx.Response:
+        """Send one attempt, and follow any redirect it answers with.
+
+        The API answers a volume file write with a 307, which keeps the method
+        and the body. A hop that leaves the origin drops the credentials that
+        were meant for that origin.
+        """
+        target: str | httpx.URL = url
+        hop_params = params
+
+        for _ in range(MAX_REDIRECTS + 1):
+            _rewind(content)
+            request = self._http.build_request(
+                method=method,
+                url=target,
+                params=hop_params,
+                json=json,
+                content=_as_async_stream(content),
+                headers=headers,
+                timeout=timeout,
+            )
+            if isinstance(target, httpx.URL) and _origin(target) != _origin(self._http.base_url):
+                request.headers.pop("Authorization", None)
+            response = await self._http.send(request)
+
+            redirect = _redirect_target(response)
+            if redirect is None:
+                return response
+            # The redirect target carries its own query already.
+            hop_params = None
+            target = redirect
+
+        raise SandboxError(f"Too many redirects for {url}")
+
     async def _request(
         self,
         *,
@@ -66,7 +138,7 @@ class _AsyncBaseClient:
         path: str,
         params: Mapping[str, Any] | None = None,
         json: Any = None,
-        content: bytes | None = None,
+        content: BinaryBody | None = None,
         content_type: str | None = None,
         headers: Mapping[str, str | None] | None = None,
         timeout: float | None | UseClientDefault = httpx.USE_CLIENT_DEFAULT,
@@ -115,7 +187,7 @@ class _AsyncBaseClient:
         json: Any,
         headers: Mapping[str, str | None] | None,
         accept: str,
-        content: bytes | None = None,
+        content: BinaryBody | None = None,
         content_type: str | None = None,
         timeout: float | None | UseClientDefault = httpx.USE_CLIENT_DEFAULT,
         retry: bool = True,
@@ -129,7 +201,7 @@ class _AsyncBaseClient:
 
         for attempt in range(max_retries + 1):
             try:
-                response = await self._http.request(
+                response = await self._send_following_redirects(
                     method=method,
                     url=path,
                     params=params,
