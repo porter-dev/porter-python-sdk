@@ -44,6 +44,17 @@ class SandboxMetric(str, Enum):
     NETWORK_TX = "network_tx"
 
 
+class SnapshotMode(str, Enum):
+    FILESYSTEM = "filesystem"
+    FULL = "full"
+
+
+class SnapshotStatus(str, Enum):
+    PENDING = "pending"
+    READY = "ready"
+    FAILED = "failed"
+
+
 class StatusResponsePhase(str, Enum):
     QUEUED = "queued"
     CREATING = "creating"
@@ -80,4 +91,4 @@ class VolumeType(str, Enum):
     OBJECT = "object"
 
 
-__all__ = ["FilterValuesResponsePhases", "LogLineLevel", "SandboxDomainSpecVisibility", "SandboxesPhase", "SandboxMetric", "StatusResponsePhase", "VolumeFileEntryType", "VolumeObjectSpecAccess", "VolumePhase", "VolumeSpecType", "VolumeType"]
+__all__ = ["FilterValuesResponsePhases", "LogLineLevel", "SandboxDomainSpecVisibility", "SandboxesPhase", "SandboxMetric", "SnapshotMode", "SnapshotStatus", "StatusResponsePhase", "VolumeFileEntryType", "VolumeObjectSpecAccess", "VolumePhase", "VolumeSpecType", "VolumeType"]

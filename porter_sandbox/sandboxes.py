@@ -32,6 +32,7 @@ class Sandboxes:
         self,
         image: str,
         *,
+        snapshot_id: str | None = None,
         name: str | None = None,
         tags: dict[str, str] | None = None,
         command: list[str] | None = None,
@@ -46,6 +47,7 @@ class Sandboxes:
     ) -> Sandbox:
         spec = SandboxSpec(
             image=image,
+            snapshot_id=snapshot_id,
             name=name,
             tags=tags,
             command=command,
@@ -98,6 +100,7 @@ class AsyncSandboxes:
         self,
         image: str,
         *,
+        snapshot_id: str | None = None,
         name: str | None = None,
         tags: dict[str, str] | None = None,
         command: list[str] | None = None,
@@ -112,6 +115,7 @@ class AsyncSandboxes:
     ) -> AsyncSandbox:
         spec = SandboxSpec(
             image=image,
+            snapshot_id=snapshot_id,
             name=name,
             tags=tags,
             command=command,

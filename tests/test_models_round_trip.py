@@ -27,6 +27,8 @@ from porter_sandbox._models import (
     SandboxNetworkingSpec,
     SandboxResourcesSpec,
     SandboxSpec,
+    SnapshotListResponse,
+    SnapshotSpec,
     VolumeFileListResponse,
     VolumeFileMoveRequest,
     VolumeListResponse,
@@ -193,6 +195,20 @@ def test_sandbox_spec_round_trip() -> None:
     instance = SandboxSpec(image="x")
     serialized = instance.model_dump(by_alias=True, exclude_none=True)
     round_tripped = SandboxSpec.model_validate(serialized)
+    assert round_tripped.model_dump(by_alias=True, exclude_none=True) == serialized
+
+
+def test_snapshot_list_response_round_trip() -> None:
+    instance = SnapshotListResponse(snapshots=[])
+    serialized = instance.model_dump(by_alias=True, exclude_none=True)
+    round_tripped = SnapshotListResponse.model_validate(serialized)
+    assert round_tripped.model_dump(by_alias=True, exclude_none=True) == serialized
+
+
+def test_snapshot_spec_round_trip() -> None:
+    instance = SnapshotSpec()
+    serialized = instance.model_dump(by_alias=True, exclude_none=True)
+    round_tripped = SnapshotSpec.model_validate(serialized)
     assert round_tripped.model_dump(by_alias=True, exclude_none=True) == serialized
 
 

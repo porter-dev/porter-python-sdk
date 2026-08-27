@@ -7,6 +7,7 @@ from porter_sandbox._client import AsyncPorterSandboxApiClient, PorterSandboxApi
 from porter_sandbox.healthz import AsyncHealthz, Healthz
 from porter_sandbox.readyz import AsyncReadyz, Readyz
 from porter_sandbox.sandboxes import AsyncSandboxes, Sandboxes
+from porter_sandbox.snapshots import AsyncSnapshots, Snapshots
 from porter_sandbox.volumes import AsyncVolumes, Volumes
 
 
@@ -28,6 +29,7 @@ class Porter:
         self.healthz: Healthz = Healthz(self._client.healthz)
         self.readyz: Readyz = Readyz(self._client.readyz)
         self.sandboxes: Sandboxes = Sandboxes(self._client.sandboxes)
+        self.snapshots: Snapshots = Snapshots(self._client.snapshots)
         self.volumes: Volumes = Volumes(self._client.volumes)
 
     @property
@@ -64,6 +66,7 @@ class AsyncPorter:
         self.healthz: AsyncHealthz = AsyncHealthz(self._client.healthz)
         self.readyz: AsyncReadyz = AsyncReadyz(self._client.readyz)
         self.sandboxes: AsyncSandboxes = AsyncSandboxes(self._client.sandboxes)
+        self.snapshots: AsyncSnapshots = AsyncSnapshots(self._client.snapshots)
         self.volumes: AsyncVolumes = AsyncVolumes(self._client.volumes)
 
     @property

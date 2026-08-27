@@ -9,6 +9,8 @@ from .enums import (
     FilterValuesResponsePhases,
     LogLineLevel,
     SandboxDomainSpecVisibility,
+    SnapshotMode,
+    SnapshotStatus,
     StatusResponsePhase,
     VolumeFileEntryType,
     VolumeObjectSpecAccess,
@@ -159,7 +161,8 @@ sandbox can use up to the given amount.
 
 
 class SandboxSpec(BaseModel):
-    image: str = Field(description="Container image to run")
+    image: str = Field(description="Container image to run. Empty when snapshot_id is set, since the\nsnapshot is the image.\n")
+    snapshot_id: str | None = Field(default=None, description="Start the sandbox from this snapshot's filesystem instead of an image,\nso image must be left unset. The snapshot carries no command or volumes:\nan omitted command runs the base image's, and the sandbox mounts only\nthe volumes this request asks for.\n")
     name: str | None = Field(default=None, description="Sandbox name, unique within the cluster. Must be a valid DNS label\n(lowercase alphanumeric and dashes). Defaults to the sandbox's id\nwhen omitted.\n")
     tags: dict[str, str] | None = Field(default=None, description="Arbitrary key/value labels for identifying and filtering sandboxes")
     command: list[str] | None = Field(default=None, description="Override image entrypoint")
@@ -171,6 +174,25 @@ class SandboxSpec(BaseModel):
     egress: SandboxEgressSpec | None = Field(default=None)
     resources: SandboxResourcesSpec | None = Field(default=None)
     ttl_seconds: int | None = Field(default=None, description="Maximum lifetime in seconds, counted from when the sandbox starts\nrunning (from creation while it waits to start). The sandbox is\nterminated once it elapses. Omit for no limit.\n")
+
+
+class Snapshot(BaseModel):
+    id: str = Field(description="Snapshot id")
+    sandbox_id: str = Field(description="Sandbox the snapshot was captured from")
+    mode: SnapshotMode
+    status: SnapshotStatus = Field(description="Capture state. A sandbox can be started from a snapshot once it is ready. A failed capture keeps its record so the reason stays visible.\n")
+    t_created_unix_ms: int | None = Field(default=None, description="When the capture started, in unix milliseconds")
+    t_ready_unix_ms: int | None = Field(default=None, description="When the capture completed, in unix milliseconds")
+    failure_reason: str | None = Field(default=None, description="Why the capture failed, when it did")
+    size_bytes: int | None = Field(default=None, description="Total size of what was captured")
+
+
+class SnapshotListResponse(BaseModel):
+    snapshots: list[Snapshot]
+
+
+class SnapshotSpec(BaseModel):
+    mode: SnapshotMode | None = Field(default=None, description="What to capture. Defaults to capturing the filesystem.")
 
 
 class StatusResponse(BaseModel):
@@ -237,4 +259,4 @@ class VolumeSpec(BaseModel):
     object: VolumeObjectSpec | None = Field(default=None)
 
 
-__all__ = ["CountPoint", "CountResponse", "CreateResponse", "Error", "ExecRequest", "ExecResponse", "ExecTarget", "FilterValuesResponse", "HealthResponse", "ListResponse", "LogLine", "LogsResponse", "LookupResult", "MetricSummaryResponse", "Pagination", "ReadinessResponse", "SandboxDomainSpec", "SandboxEgressSpec", "SandboxMetricsPoint", "SandboxMetricsResponse", "SandboxMetricsResult", "SandboxMetricsSeries", "SandboxNetworkingSpec", "SandboxResourcesSpec", "SandboxSpec", "StatusResponse", "Volume", "VolumeFileEntry", "VolumeFileListResponse", "VolumeFileMoveRequest", "VolumeListResponse", "VolumeObjectSpec", "VolumeSpec"]
+__all__ = ["CountPoint", "CountResponse", "CreateResponse", "Error", "ExecRequest", "ExecResponse", "ExecTarget", "FilterValuesResponse", "HealthResponse", "ListResponse", "LogLine", "LogsResponse", "LookupResult", "MetricSummaryResponse", "Pagination", "ReadinessResponse", "SandboxDomainSpec", "SandboxEgressSpec", "SandboxMetricsPoint", "SandboxMetricsResponse", "SandboxMetricsResult", "SandboxMetricsSeries", "SandboxNetworkingSpec", "SandboxResourcesSpec", "SandboxSpec", "Snapshot", "SnapshotListResponse", "SnapshotSpec", "StatusResponse", "Volume", "VolumeFileEntry", "VolumeFileListResponse", "VolumeFileMoveRequest", "VolumeListResponse", "VolumeObjectSpec", "VolumeSpec"]
