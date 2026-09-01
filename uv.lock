@@ -345,7 +345,7 @@ wheels = [
 
 [[package]]
 name = "porter-sandbox"
-version = "0.1.55"
+version = "0.1.58"
 source = { editable = "." }
 dependencies = [
     { name = "httpx" },

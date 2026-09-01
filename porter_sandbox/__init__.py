@@ -39,6 +39,9 @@ from ._models import (
     SandboxNetworkingSpec,
     SandboxResourcesSpec,
     SandboxSpec,
+    Snapshot,
+    SnapshotListResponse,
+    SnapshotSpec,
     StatusResponse,
     VolumeFileEntry,
     VolumeFileListResponse,
@@ -54,6 +57,8 @@ from .enums import (
     SandboxDomainSpecVisibility,
     SandboxesPhase,
     SandboxMetric,
+    SnapshotMode,
+    SnapshotStatus,
     StatusResponsePhase,
     VolumeFileEntryType,
     VolumeObjectSpecAccess,
@@ -66,6 +71,7 @@ from .porter import AsyncPorter, Porter
 from .readyz import AsyncReadyz, Readyz
 from .sandbox import AsyncSandbox, Sandbox
 from .sandboxes import AsyncSandboxes, Sandboxes
+from .snapshots import AsyncSnapshots, Snapshots
 from .volume import AsyncObjectVolume, AsyncVolume, ObjectVolume, Volume, VolumeFile
 from .volumes import AsyncVolumes, Volumes
 
@@ -77,6 +83,7 @@ __all__ = [
     "AsyncReadyz",
     "AsyncSandbox",
     "AsyncSandboxes",
+    "AsyncSnapshots",
     "AsyncVolume",
     "AsyncVolumes",
     "AuthenticationError",
@@ -124,6 +131,12 @@ __all__ = [
     "Sandboxes",
     "SandboxesPhase",
     "ServerError",
+    "Snapshot",
+    "SnapshotListResponse",
+    "SnapshotMode",
+    "SnapshotSpec",
+    "SnapshotStatus",
+    "Snapshots",
     "StatusResponse",
     "StatusResponsePhase",
     "Volume",

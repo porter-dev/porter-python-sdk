@@ -9,6 +9,8 @@ from .enums import (
     FilterValuesResponsePhases,
     LogLineLevel,
     SandboxDomainSpecVisibility,
+    SnapshotMode,
+    SnapshotStatus,
     StatusResponsePhase,
     VolumeFileEntryType,
     VolumeObjectSpecAccess,
@@ -117,7 +119,7 @@ class ReadinessResponse(BaseModel):
 
 class SandboxDomainSpec(BaseModel):
     domain: str | None = Field(default=None, description="Fully qualified hostname for the sandbox, one label under the\ntarget ingress's domain. Unlike name it need not be unique, so\nsuccessive sandboxes can reuse one hostname (only one may be live\nat a time). Defaults to <name>.<ingress domain>, then\n<id>.<ingress domain>, when omitted.\n")
-    visibility: SandboxDomainSpecVisibility | None = Field(default=None, description="Which sandbox ingress serves the domain when the cluster has both a\npublic and a private one. Omit to default to whichever is\nconfigured, public winning. Rejected when the sandbox exposes a\nport but the requested ingress is not configured on the cluster.\n")
+    visibility: SandboxDomainSpecVisibility | None = Field(default=None, description="Which sandbox ingress serves the domain when the cluster has both a\npublic and a private one. Omit to default to whichever is\nconfigured, public winning; with neither configured, the sandbox is\nserved at its cluster-internal address only. Rejected when the\nsandbox exposes a port but the requested ingress is not configured\non the cluster.\n")
 
 
 class SandboxEgressSpec(BaseModel):
@@ -146,7 +148,8 @@ class SandboxMetricsSeries(BaseModel):
 
 class SandboxNetworkingSpec(BaseModel):
     port: int = Field(description="Port the workload listens on; the per-sandbox Service targets it on\nthe pod. Privileged ports (1-1023) are not allowed.\n")
-    domains: list[SandboxDomainSpec] | None = Field(default=None, description="Domains the port is served on through a sandbox ingress. Omit to\nserve the port at the default hostname through the default ingress.\nCurrently only one entry is supported.\n")
+    domains: list[SandboxDomainSpec] | None = Field(default=None, description="Domains the port is served on through a sandbox ingress. Omit to\nserve the port at the default hostname through the default ingress,\nor - on a cluster with no sandbox ingress - at the cluster-internal\naddress only. Currently only one entry is supported.\n")
+    internal: bool | None = Field(default=None, description="Serve the port inside the cluster only: the sandbox gets no public\nhostname and is reachable at the cluster-internal address surfaced\nas internal_address in its status. Cannot be combined with domains.\n")
 
 
 class SandboxResourcesSpec(BaseModel):
@@ -159,7 +162,8 @@ sandbox can use up to the given amount.
 
 
 class SandboxSpec(BaseModel):
-    image: str = Field(description="Container image to run")
+    image: str = Field(description="Container image to run. Empty when snapshot_id is set, since the\nsnapshot is the image.\n")
+    snapshot_id: str | None = Field(default=None, description="Start the sandbox from this snapshot's filesystem instead of an image,\nso image must be left unset. The snapshot carries no command or volumes:\nan omitted command runs the base image's, and the sandbox mounts only\nthe volumes this request asks for.\n")
     name: str | None = Field(default=None, description="Sandbox name, unique within the cluster. Must be a valid DNS label\n(lowercase alphanumeric and dashes). Defaults to the sandbox's id\nwhen omitted.\n")
     tags: dict[str, str] | None = Field(default=None, description="Arbitrary key/value labels for identifying and filtering sandboxes")
     command: list[str] | None = Field(default=None, description="Override image entrypoint")
@@ -173,6 +177,25 @@ class SandboxSpec(BaseModel):
     ttl_seconds: int | None = Field(default=None, description="Maximum lifetime in seconds, counted from when the sandbox starts\nrunning (from creation while it waits to start). The sandbox is\nterminated once it elapses. Omit for no limit.\n")
 
 
+class Snapshot(BaseModel):
+    id: str = Field(description="Snapshot id")
+    sandbox_id: str = Field(description="Sandbox the snapshot was captured from")
+    mode: SnapshotMode
+    status: SnapshotStatus = Field(description="Capture state. A sandbox can be started from a snapshot once it is ready. A failed capture keeps its record so the reason stays visible.\n")
+    t_created_unix_ms: int | None = Field(default=None, description="When the capture started, in unix milliseconds")
+    t_ready_unix_ms: int | None = Field(default=None, description="When the capture completed, in unix milliseconds")
+    failure_reason: str | None = Field(default=None, description="Why the capture failed, when it did")
+    size_bytes: int | None = Field(default=None, description="Total size of what was captured")
+
+
+class SnapshotListResponse(BaseModel):
+    snapshots: list[Snapshot]
+
+
+class SnapshotSpec(BaseModel):
+    mode: SnapshotMode | None = Field(default=None, description="What to capture. Defaults to capturing the filesystem.")
+
+
 class StatusResponse(BaseModel):
     id: str = Field(description="Sandbox ID")
     name: str = Field(description="Sandbox name (the id when no name was given)")
@@ -184,6 +207,7 @@ class StatusResponse(BaseModel):
     started_at: str | None = Field(default=None, description="When the sandbox pod started running")
     finished_at: str | None = Field(default=None, description="When the sandbox reached a terminal phase (succeeded, failed, or terminated)")
     host: str = Field(description="Public hostname the sandbox is reachable at. Empty when the sandbox\nexposes no port or the cluster has no sandbox ingress configured.\n")
+    internal_address: str | None = Field(default=None, description="Cluster-internal host:port the sandbox's exposed port is served on,\nreachable from workloads inside the cluster subject to their own\nnetwork policy. Empty when the sandbox exposes no port.\n")
     volume_mounts: dict[str, str] | None = Field(default=None, description="Volumes the sandbox mounts, keyed by mount path")
     exec_target: ExecTarget | None = Field(default=None, description="Where a client addresses an interactive exec into the running sandbox. Absent until the sandbox has a pod.")
 
@@ -237,4 +261,4 @@ class VolumeSpec(BaseModel):
     object: VolumeObjectSpec | None = Field(default=None)
 
 
-__all__ = ["CountPoint", "CountResponse", "CreateResponse", "Error", "ExecRequest", "ExecResponse", "ExecTarget", "FilterValuesResponse", "HealthResponse", "ListResponse", "LogLine", "LogsResponse", "LookupResult", "MetricSummaryResponse", "Pagination", "ReadinessResponse", "SandboxDomainSpec", "SandboxEgressSpec", "SandboxMetricsPoint", "SandboxMetricsResponse", "SandboxMetricsResult", "SandboxMetricsSeries", "SandboxNetworkingSpec", "SandboxResourcesSpec", "SandboxSpec", "StatusResponse", "Volume", "VolumeFileEntry", "VolumeFileListResponse", "VolumeFileMoveRequest", "VolumeListResponse", "VolumeObjectSpec", "VolumeSpec"]
+__all__ = ["CountPoint", "CountResponse", "CreateResponse", "Error", "ExecRequest", "ExecResponse", "ExecTarget", "FilterValuesResponse", "HealthResponse", "ListResponse", "LogLine", "LogsResponse", "LookupResult", "MetricSummaryResponse", "Pagination", "ReadinessResponse", "SandboxDomainSpec", "SandboxEgressSpec", "SandboxMetricsPoint", "SandboxMetricsResponse", "SandboxMetricsResult", "SandboxMetricsSeries", "SandboxNetworkingSpec", "SandboxResourcesSpec", "SandboxSpec", "Snapshot", "SnapshotListResponse", "SnapshotSpec", "StatusResponse", "Volume", "VolumeFileEntry", "VolumeFileListResponse", "VolumeFileMoveRequest", "VolumeListResponse", "VolumeObjectSpec", "VolumeSpec"]
