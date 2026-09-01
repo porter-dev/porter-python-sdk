@@ -6,6 +6,7 @@ from __future__ import annotations
 from .healthz import AsyncHealthz, Healthz
 from .readyz import AsyncReadyz, Readyz
 from .sandboxes import AsyncSandboxes, Sandboxes
+from .snapshots import AsyncSnapshots, Snapshots
 from .volumes import AsyncVolumes, Volumes
 
-__all__ = ["Healthz", "AsyncHealthz", "Readyz", "AsyncReadyz", "Sandboxes", "AsyncSandboxes", "Volumes", "AsyncVolumes"]
+__all__ = ["Healthz", "AsyncHealthz", "Readyz", "AsyncReadyz", "Sandboxes", "AsyncSandboxes", "Snapshots", "AsyncSnapshots", "Volumes", "AsyncVolumes"]

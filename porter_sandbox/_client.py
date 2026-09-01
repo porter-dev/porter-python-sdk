@@ -9,6 +9,7 @@ from ._config import Config
 from .resources.healthz import AsyncHealthz, Healthz
 from .resources.readyz import AsyncReadyz, Readyz
 from .resources.sandboxes import AsyncSandboxes, Sandboxes
+from .resources.snapshots import AsyncSnapshots, Snapshots
 from .resources.volumes import AsyncVolumes, Volumes
 
 
@@ -26,6 +27,7 @@ class PorterSandboxApiClient:
             config=Config.resolve(api_key=api_key, base_url=base_url, timeout=timeout),
         )
         self.sandboxes: Sandboxes = Sandboxes(self._base)
+        self.snapshots: Snapshots = Snapshots(self._base)
         self.volumes: Volumes = Volumes(self._base)
         self.healthz: Healthz = Healthz(self._base)
         self.readyz: Readyz = Readyz(self._base)
@@ -55,6 +57,7 @@ class AsyncPorterSandboxApiClient:
             config=Config.resolve(api_key=api_key, base_url=base_url, timeout=timeout),
         )
         self.sandboxes: AsyncSandboxes = AsyncSandboxes(self._base)
+        self.snapshots: AsyncSnapshots = AsyncSnapshots(self._base)
         self.volumes: AsyncVolumes = AsyncVolumes(self._base)
         self.healthz: AsyncHealthz = AsyncHealthz(self._base)
         self.readyz: AsyncReadyz = AsyncReadyz(self._base)
