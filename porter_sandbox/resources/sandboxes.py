@@ -22,7 +22,7 @@ from .._models import (
     SandboxSpec,
     StatusResponse,
 )
-from ..enums import SandboxesPhase, SandboxMetric
+from ..enums import SandboxesPhase, SandboxesSource, SandboxMetric
 
 _M = TypeVar("_M", bound=BaseModel)
 
@@ -123,14 +123,17 @@ class Sandboxes:
         response = self._client._request(method="GET", path=path)
         return _coerce(StatusResponse, response)
 
-    def delete_sandbox(self, id: str) -> None:
+    def delete_sandbox(self, id: str, source: SandboxesSource | None = None) -> None:
         """
         Terminate sandbox
 
         Terminate a sandbox and clean up its resources
         """
         path = f"/v1/sandbox/{id}"
-        self._client._request(method="DELETE", path=path)
+        params: dict[str, Any] = {}
+        if source is not None:
+            params["source"] = source
+        self._client._request(method="DELETE", path=path, params=params)
         return None
 
     def get_sandbox_logs(self, id: str, limit: int | None = None, since: str | None = None) -> LogsResponse:
@@ -282,14 +285,17 @@ class AsyncSandboxes:
         response = await self._client._request(method="GET", path=path)
         return _coerce(StatusResponse, response)
 
-    async def delete_sandbox(self, id: str) -> None:
+    async def delete_sandbox(self, id: str, source: SandboxesSource | None = None) -> None:
         """
         Terminate sandbox
 
         Terminate a sandbox and clean up its resources
         """
         path = f"/v1/sandbox/{id}"
-        await self._client._request(method="DELETE", path=path)
+        params: dict[str, Any] = {}
+        if source is not None:
+            params["source"] = source
+        await self._client._request(method="DELETE", path=path, params=params)
         return None
 
     async def get_sandbox_logs(self, id: str, limit: int | None = None, since: str | None = None) -> LogsResponse:

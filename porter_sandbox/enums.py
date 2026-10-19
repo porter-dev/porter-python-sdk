@@ -35,6 +35,11 @@ class SandboxesPhase(str, Enum):
     TERMINATED = "terminated"
 
 
+class SandboxesSource(str, Enum):
+    DASHBOARD = "dashboard"
+    CLI = "cli"
+
+
 class SandboxMetric(str, Enum):
     CPU_USAGE = "cpu_usage"
     CPU_RESERVED = "cpu_reserved"
@@ -64,6 +69,17 @@ class StatusResponsePhase(str, Enum):
     TERMINATED = "terminated"
 
 
+class StatusResponseTerminationReason(str, Enum):
+    DASHBOARD = "dashboard"
+    CLI = "cli"
+    SDK = "sdk"
+    TTL_EXPIRED = "ttl_expired"
+    WORKLOAD_EXITED = "workload_exited"
+    BACKEND_LOST = "backend_lost"
+    LAUNCH_FAILED = "launch_failed"
+    USER_TERMINATED = "user_terminated"
+
+
 class VolumeFileEntryType(str, Enum):
     FILE = "file"
     DIRECTORY = "directory"
@@ -73,6 +89,11 @@ class VolumeObjectSpecAccess(str, Enum):
     READ_WRITE = "read_write"
     READ_ONLY = "read_only"
     WRITE_ONLY_NEW_FILES = "write_only_new_files"
+
+
+class VolumeObjectSpecMode(str, Enum):
+    OBJECT = "object"
+    FILESYSTEM = "filesystem"
 
 
 class VolumePhase(str, Enum):
@@ -91,4 +112,4 @@ class VolumeType(str, Enum):
     OBJECT = "object"
 
 
-__all__ = ["FilterValuesResponsePhases", "LogLineLevel", "SandboxDomainSpecVisibility", "SandboxesPhase", "SandboxMetric", "SnapshotMode", "SnapshotStatus", "StatusResponsePhase", "VolumeFileEntryType", "VolumeObjectSpecAccess", "VolumePhase", "VolumeSpecType", "VolumeType"]
+__all__ = ["FilterValuesResponsePhases", "LogLineLevel", "SandboxDomainSpecVisibility", "SandboxesPhase", "SandboxesSource", "SandboxMetric", "SnapshotMode", "SnapshotStatus", "StatusResponsePhase", "StatusResponseTerminationReason", "VolumeFileEntryType", "VolumeObjectSpecAccess", "VolumeObjectSpecMode", "VolumePhase", "VolumeSpecType", "VolumeType"]
