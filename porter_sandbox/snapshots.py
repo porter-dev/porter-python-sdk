@@ -25,6 +25,9 @@ class Snapshots:
     def list(self, sandbox_id: str | None = None) -> SnapshotListResponse:
         return self._resource.list_snapshots(sandbox_id=sandbox_id)
 
+    def get(self, id: str) -> Snapshot:
+        return self._resource.get_snapshot(id=id)
+
     def delete(self, id: str) -> None:
         self._resource.delete_snapshot(id=id)
         return None
@@ -46,6 +49,9 @@ class AsyncSnapshots:
 
     async def list(self, sandbox_id: str | None = None) -> SnapshotListResponse:
         return await self._resource.list_snapshots(sandbox_id=sandbox_id)
+
+    async def get(self, id: str) -> Snapshot:
+        return await self._resource.get_snapshot(id=id)
 
     async def delete(self, id: str) -> None:
         await self._resource.delete_snapshot(id=id)

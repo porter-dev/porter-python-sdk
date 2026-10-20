@@ -12,8 +12,10 @@ from .enums import (
     SnapshotMode,
     SnapshotStatus,
     StatusResponsePhase,
+    StatusResponseTerminationReason,
     VolumeFileEntryType,
     VolumeObjectSpecAccess,
+    VolumeObjectSpecMode,
     VolumePhase,
     VolumeSpecType,
     VolumeType,
@@ -48,6 +50,7 @@ class ExecResponse(BaseModel):
     stdout: str = Field(description="Captured standard output")
     stderr: str = Field(description="Captured standard error")
     exit_code: int = Field(description="Command exit code. Non-zero is a normal result, not an error.")
+    exec_id: str | None = Field(default=None, description="Identifier stamped on log lines produced by this exec.")
 
 
 class ExecTarget(BaseModel):
@@ -76,7 +79,7 @@ class LogLine(BaseModel):
     timestamp: str = Field(description="When the log line was emitted")
     line: str = Field(description="Log line content")
     level: LogLineLevel = Field(description="Log severity level")
-    exec_id: str = Field(description="ID of the exec that produced this line; empty when the line is the workload's own output")
+    exec_id: str = Field(description="ID of the exec that produced this line; empty when the line is the workload's own output.")
 
 
 class LogsResponse(BaseModel):
@@ -204,8 +207,9 @@ class StatusResponse(BaseModel):
     phase: StatusResponsePhase = Field(description="Current phase")
     exit_code: int | None = Field(default=None, description="Exit code if completed")
     created_at: str = Field(description="When the sandbox was created")
-    started_at: str | None = Field(default=None, description="When the sandbox pod started running")
+    started_at: str | None = Field(default=None, description="When the sandbox's workload container started")
     finished_at: str | None = Field(default=None, description="When the sandbox reached a terminal phase (succeeded, failed, or terminated)")
+    termination_reason: StatusResponseTerminationReason | None = Field(default=None, description="Why the sandbox reached a terminal phase. Absent on live sandboxes.")
     host: str = Field(description="Public hostname the sandbox is reachable at. Empty when the sandbox\nexposes no port or the cluster has no sandbox ingress configured.\n")
     internal_address: str | None = Field(default=None, description="Cluster-internal host:port the sandbox's exposed port is served on,\nreachable from workloads inside the cluster subject to their own\nnetwork policy. Empty when the sandbox exposes no port.\n")
     volume_mounts: dict[str, str] | None = Field(default=None, description="Volumes the sandbox mounts, keyed by mount path")
@@ -253,6 +257,7 @@ class VolumeObjectSpec(BaseModel):
     bucket: str = Field(description="Bucket the volume exposes. Must be registered on the cluster.\n")
     prefix: str | None = Field(default=None, description="Key prefix the volume is scoped to, without leading or trailing\nslashes. Sandboxes see only objects under the prefix, at paths\nrelative to it. Omit to expose the whole bucket.\n")
     access: VolumeObjectSpecAccess | None = Field(default=None, description="How sandboxes that attach the volume can use the bucket. read_only\nforbids all writes; write_only_new_files allows only new objects, with no\noverwrites or deletes of existing ones. Defaults to read_write. A\nbucket registered with read_only accepts only read_only volumes.\n")
+    mode: VolumeObjectSpecMode | None = Field(default=None, description="How sandboxes mount the bucket. object mounts it with Mountpoint for\nAmazon S3, which cannot rename or edit files in place. filesystem\nmounts the bucket's S3 Files file system, with full file semantics.\nWrites reach the bucket about a minute after the last change.\nfilesystem needs the bucket's sandbox_filesystem capability and does\nnot support write_only_new_files. Defaults to object.\n")
 
 
 class VolumeSpec(BaseModel):

@@ -49,6 +49,16 @@ class Snapshots:
         response = self._client._request(method="GET", path=path, params=params)
         return _coerce(SnapshotListResponse, response)
 
+    def get_snapshot(self, id: str) -> Snapshot:
+        """
+        Get snapshot
+
+        Get one snapshot by id, including its current capture status.
+        """
+        path = f"/v1/snapshot/{id}"
+        response = self._client._request(method="GET", path=path)
+        return _coerce(Snapshot, response)
+
     def delete_snapshot(self, id: str) -> None:
         """
         Delete snapshot
@@ -89,6 +99,16 @@ class AsyncSnapshots:
             params["sandbox_id"] = sandbox_id
         response = await self._client._request(method="GET", path=path, params=params)
         return _coerce(SnapshotListResponse, response)
+
+    async def get_snapshot(self, id: str) -> Snapshot:
+        """
+        Get snapshot
+
+        Get one snapshot by id, including its current capture status.
+        """
+        path = f"/v1/snapshot/{id}"
+        response = await self._client._request(method="GET", path=path)
+        return _coerce(Snapshot, response)
 
     async def delete_snapshot(self, id: str) -> None:
         """
