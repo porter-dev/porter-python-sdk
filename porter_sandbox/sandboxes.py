@@ -30,8 +30,8 @@ class Sandboxes:
 
     def create(
         self,
-        image: str,
         *,
+        image: str | None = None,
         snapshot_id: str | None = None,
         name: str | None = None,
         tags: dict[str, str] | None = None,
@@ -98,8 +98,8 @@ class AsyncSandboxes:
 
     async def create(
         self,
-        image: str,
         *,
+        image: str | None = None,
         snapshot_id: str | None = None,
         name: str | None = None,
         tags: dict[str, str] | None = None,

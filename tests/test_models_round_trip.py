@@ -192,7 +192,7 @@ def test_sandbox_resources_spec_round_trip() -> None:
 
 
 def test_sandbox_spec_round_trip() -> None:
-    instance = SandboxSpec(image="x")
+    instance = SandboxSpec()
     serialized = instance.model_dump(by_alias=True, exclude_none=True)
     round_tripped = SandboxSpec.model_validate(serialized)
     assert round_tripped.model_dump(by_alias=True, exclude_none=True) == serialized

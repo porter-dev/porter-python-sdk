@@ -121,7 +121,7 @@ class ReadinessResponse(BaseModel):
 
 
 class SandboxDomainSpec(BaseModel):
-    domain: str | None = Field(default=None, description="Fully qualified hostname for the sandbox, one label under the\ntarget ingress's domain. Unlike name it need not be unique, so\nsuccessive sandboxes can reuse one hostname (only one may be live\nat a time). Defaults to <name>.<ingress domain>, then\n<id>.<ingress domain>, when omitted.\n")
+    domain: str | None = Field(default=None, description="Fully qualified hostname for the sandbox, one label under the\ntarget ingress's domain. Unlike name it need not be unique, so\nsuccessive sandboxes can reuse one hostname (only one may be live\nat a time). Defaults to <name>.<ingress domain>, then\n<id>.<ingress domain>, when omitted. Not available on Porter-hosted\nsandboxes, which are always served at\n<name>-<8 random characters>.<ingress domain>.\n")
     visibility: SandboxDomainSpecVisibility | None = Field(default=None, description="Which sandbox ingress serves the domain when the cluster has both a\npublic and a private one. Omit to default to whichever is\nconfigured, public winning; with neither configured, the sandbox is\nserved at its cluster-internal address only. Rejected when the\nsandbox exposes a port but the requested ingress is not configured\non the cluster.\n")
 
 
@@ -165,7 +165,7 @@ sandbox can use up to the given amount.
 
 
 class SandboxSpec(BaseModel):
-    image: str = Field(description="Container image to run. Empty when snapshot_id is set, since the\nsnapshot is the image.\n")
+    image: str | None = Field(default=None, description="Container image to run. Empty when snapshot_id is set, since the\nsnapshot is the image. When both are omitted, the sandbox runs\npython:3.14-slim, and with no command or args it runs sleep infinity.\n")
     snapshot_id: str | None = Field(default=None, description="Start the sandbox from this snapshot's filesystem instead of an image,\nso image must be left unset. The snapshot carries no command or volumes:\nan omitted command runs the base image's, and the sandbox mounts only\nthe volumes this request asks for.\n")
     name: str | None = Field(default=None, description="Sandbox name, unique within the cluster. Must be a valid DNS label\n(lowercase alphanumeric and dashes). Defaults to the sandbox's id\nwhen omitted.\n")
     tags: dict[str, str] | None = Field(default=None, description="Arbitrary key/value labels for identifying and filtering sandboxes")
