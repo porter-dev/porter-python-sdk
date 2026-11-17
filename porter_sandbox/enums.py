@@ -75,6 +75,7 @@ class StatusResponseTerminationReason(str, Enum):
     SDK = "sdk"
     TTL_EXPIRED = "ttl_expired"
     WORKLOAD_EXITED = "workload_exited"
+    MEMORY_LIMIT = "memory_limit"
     BACKEND_LOST = "backend_lost"
     LAUNCH_FAILED = "launch_failed"
     USER_TERMINATED = "user_terminated"
@@ -83,6 +84,16 @@ class StatusResponseTerminationReason(str, Enum):
 class VolumeFileEntryType(str, Enum):
     FILE = "file"
     DIRECTORY = "directory"
+
+
+class VolumeFileUrlMethod(str, Enum):
+    GET = "GET"
+    PUT = "PUT"
+
+
+class VolumeFileUrlRequestMethod(str, Enum):
+    GET = "GET"
+    PUT = "PUT"
 
 
 class VolumeObjectSpecAccess(str, Enum):
@@ -112,4 +123,4 @@ class VolumeType(str, Enum):
     OBJECT = "object"
 
 
-__all__ = ["FilterValuesResponsePhases", "LogLineLevel", "SandboxDomainSpecVisibility", "SandboxesPhase", "SandboxesSource", "SandboxMetric", "SnapshotMode", "SnapshotStatus", "StatusResponsePhase", "StatusResponseTerminationReason", "VolumeFileEntryType", "VolumeObjectSpecAccess", "VolumeObjectSpecMode", "VolumePhase", "VolumeSpecType", "VolumeType"]
+__all__ = ["FilterValuesResponsePhases", "LogLineLevel", "SandboxDomainSpecVisibility", "SandboxesPhase", "SandboxesSource", "SandboxMetric", "SnapshotMode", "SnapshotStatus", "StatusResponsePhase", "StatusResponseTerminationReason", "VolumeFileEntryType", "VolumeFileUrlMethod", "VolumeFileUrlRequestMethod", "VolumeObjectSpecAccess", "VolumeObjectSpecMode", "VolumePhase", "VolumeSpecType", "VolumeType"]
