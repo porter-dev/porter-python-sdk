@@ -14,6 +14,8 @@ from .enums import (
     StatusResponsePhase,
     StatusResponseTerminationReason,
     VolumeFileEntryType,
+    VolumeFileUrlMethod,
+    VolumeFileUrlRequestMethod,
     VolumeObjectSpecAccess,
     VolumeObjectSpecMode,
     VolumePhase,
@@ -121,7 +123,7 @@ class ReadinessResponse(BaseModel):
 
 
 class SandboxDomainSpec(BaseModel):
-    domain: str | None = Field(default=None, description="Fully qualified hostname for the sandbox, one label under the\ntarget ingress's domain. Unlike name it need not be unique, so\nsuccessive sandboxes can reuse one hostname (only one may be live\nat a time). Defaults to <name>.<ingress domain>, then\n<id>.<ingress domain>, when omitted.\n")
+    domain: str | None = Field(default=None, description="Fully qualified hostname for the sandbox, one label under the\ntarget ingress's domain. Unlike name it need not be unique, so\nsuccessive sandboxes can reuse one hostname (only one may be live\nat a time). Defaults to <name>.<ingress domain>, then\n<id>.<ingress domain>, when omitted. Not available on Porter-hosted\nsandboxes, which are always served at\n<name>-<8 random characters>.<ingress domain>.\n")
     visibility: SandboxDomainSpecVisibility | None = Field(default=None, description="Which sandbox ingress serves the domain when the cluster has both a\npublic and a private one. Omit to default to whichever is\nconfigured, public winning; with neither configured, the sandbox is\nserved at its cluster-internal address only. Rejected when the\nsandbox exposes a port but the requested ingress is not configured\non the cluster.\n")
 
 
@@ -165,7 +167,7 @@ sandbox can use up to the given amount.
 
 
 class SandboxSpec(BaseModel):
-    image: str = Field(description="Container image to run. Empty when snapshot_id is set, since the\nsnapshot is the image.\n")
+    image: str | None = Field(default=None, description="Container image to run. Empty when snapshot_id is set, since the\nsnapshot is the image. When both are omitted, the sandbox runs\npython:3.14-slim, and with no command or args it runs sleep infinity.\n")
     snapshot_id: str | None = Field(default=None, description="Start the sandbox from this snapshot's filesystem instead of an image,\nso image must be left unset. The snapshot carries no command or volumes:\nan omitted command runs the base image's, and the sandbox mounts only\nthe volumes this request asks for.\n")
     name: str | None = Field(default=None, description="Sandbox name, unique within the cluster. Must be a valid DNS label\n(lowercase alphanumeric and dashes). Defaults to the sandbox's id\nwhen omitted.\n")
     tags: dict[str, str] | None = Field(default=None, description="Arbitrary key/value labels for identifying and filtering sandboxes")
@@ -249,6 +251,22 @@ class VolumeFileMoveRequest(BaseModel):
     to: str = Field(description="Where to move it to, relative to the volume root, with or without a\nleading slash. This is the entry's full new path rather than the\ndirectory to place it in, so a move renames and relocates in one call.\nThe parent directory must already exist.\n")
 
 
+class VolumeFileUrl(BaseModel):
+    url: str = Field(description="The signed URL. Whoever holds it can use its method on the file any number of times until it expires, so treat it as a secret and keep it out of logs.")
+    method: VolumeFileUrlMethod = Field(description="The HTTP method the URL allows. A GET URL also allows HEAD.")
+    expires_at: str = Field(description="When the URL stops working")
+    etag: str = Field(description="The file's ETag when the URL was signed, or an empty string when no file was at the path")
+
+
+class VolumeFileUrlRequest(BaseModel):
+    path: str = Field(description="File the URL reaches, relative to the volume root, with or without a leading slash")
+    method: VolumeFileUrlRequestMethod = Field(description="GET to read the file (HEAD is allowed too), PUT to write it")
+    expires_in_seconds: int | None = Field(default=None, description="How long the URL lives, at most 604800 (7 days)")
+    if_match: str | None = Field(default=None, description="On a PUT URL, allow the write only over the file at this ETag")
+    if_none_match: bool | None = Field(default=None, description="On a PUT URL, allow the write only when no file is at the path")
+    download_name: str | None = Field(default=None, description="On a GET URL, the file name browsers save the download under")
+
+
 class VolumeListResponse(BaseModel):
     volumes: list[Volume] = Field(description="All volumes in the cluster")
 
@@ -266,4 +284,4 @@ class VolumeSpec(BaseModel):
     object: VolumeObjectSpec | None = Field(default=None)
 
 
-__all__ = ["CountPoint", "CountResponse", "CreateResponse", "Error", "ExecRequest", "ExecResponse", "ExecTarget", "FilterValuesResponse", "HealthResponse", "ListResponse", "LogLine", "LogsResponse", "LookupResult", "MetricSummaryResponse", "Pagination", "ReadinessResponse", "SandboxDomainSpec", "SandboxEgressSpec", "SandboxMetricsPoint", "SandboxMetricsResponse", "SandboxMetricsResult", "SandboxMetricsSeries", "SandboxNetworkingSpec", "SandboxResourcesSpec", "SandboxSpec", "Snapshot", "SnapshotListResponse", "SnapshotSpec", "StatusResponse", "Volume", "VolumeFileEntry", "VolumeFileListResponse", "VolumeFileMoveRequest", "VolumeListResponse", "VolumeObjectSpec", "VolumeSpec"]
+__all__ = ["CountPoint", "CountResponse", "CreateResponse", "Error", "ExecRequest", "ExecResponse", "ExecTarget", "FilterValuesResponse", "HealthResponse", "ListResponse", "LogLine", "LogsResponse", "LookupResult", "MetricSummaryResponse", "Pagination", "ReadinessResponse", "SandboxDomainSpec", "SandboxEgressSpec", "SandboxMetricsPoint", "SandboxMetricsResponse", "SandboxMetricsResult", "SandboxMetricsSeries", "SandboxNetworkingSpec", "SandboxResourcesSpec", "SandboxSpec", "Snapshot", "SnapshotListResponse", "SnapshotSpec", "StatusResponse", "Volume", "VolumeFileEntry", "VolumeFileListResponse", "VolumeFileMoveRequest", "VolumeFileUrl", "VolumeFileUrlRequest", "VolumeListResponse", "VolumeObjectSpec", "VolumeSpec"]

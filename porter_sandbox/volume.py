@@ -10,8 +10,19 @@ from datetime import datetime
 from porter_sandbox._binary import BinaryBody
 from porter_sandbox._errors import SandboxError
 from porter_sandbox._models import Volume as VolumeRecord
-from porter_sandbox._models import VolumeFileEntry, VolumeFileMoveRequest, VolumeObjectSpec
-from porter_sandbox.enums import VolumeFileEntryType, VolumePhase, VolumeType
+from porter_sandbox._models import (
+    VolumeFileEntry,
+    VolumeFileMoveRequest,
+    VolumeFileUrl,
+    VolumeFileUrlRequest,
+    VolumeObjectSpec,
+)
+from porter_sandbox.enums import (
+    VolumeFileEntryType,
+    VolumeFileUrlRequestMethod,
+    VolumePhase,
+    VolumeType,
+)
 from porter_sandbox.resources.volumes import AsyncVolumes as AsyncVolumesResource
 from porter_sandbox.resources.volumes import Volumes as VolumesResource
 
@@ -40,6 +51,24 @@ def _move_request(from_path: str, to_path: str) -> VolumeFileMoveRequest:
     # declares.
     return VolumeFileMoveRequest.model_validate(
         {"from": _normalize_path(from_path), "to": _normalize_path(to_path)}
+    )
+
+
+def _file_url_request(
+    path: str,
+    method: VolumeFileUrlRequestMethod | str,
+    expires_in_seconds: int | None,
+    if_match: str | None,
+    if_none_match: bool | None,
+    download_name: str | None,
+) -> VolumeFileUrlRequest:
+    return VolumeFileUrlRequest(
+        path=_normalize_path(path),
+        method=VolumeFileUrlRequestMethod(method),
+        expires_in_seconds=expires_in_seconds,
+        if_match=if_match,
+        if_none_match=if_none_match,
+        download_name=download_name,
     )
 
 
@@ -224,6 +253,37 @@ class Volume(_BaseVolume):
         self._volumes.move_volume_file(
             id=self.id,
             body=_move_request(from_path, to_path),
+        )
+
+    def file_url(
+        self,
+        path: str,
+        *,
+        method: VolumeFileUrlRequestMethod | str = VolumeFileUrlRequestMethod.GET,
+        expires_in_seconds: int | None = None,
+        if_match: str | None = None,
+        if_none_match: bool | None = None,
+        download_name: str | None = None,
+    ) -> VolumeFileUrl:
+        """Sign a URL that allows its method on one file, any number of times, until it expires.
+
+        The URL needs no Porter credentials. Hand it to whoever should read or
+        write the file, such as a browser or another service, and keep it out of
+        logs:
+
+        - `method="GET"` downloads the file (HEAD works too). `download_name` is
+          the name a browser saves it under.
+        - `method="PUT"` uploads it. `if_none_match=True` only creates the file,
+          and `if_match=<etag>` only replaces that version; otherwise the upload
+          answers 412.
+
+        A URL lives 15 minutes unless `expires_in_seconds` says otherwise, at
+        most 7 days. The result carries the file's current ETag, an empty string
+        when nothing is at the path yet.
+        """
+        return self._volumes.create_volume_file_url(
+            id=self.id,
+            body=_file_url_request(path, method, expires_in_seconds, if_match, if_none_match, download_name),
         )
 
     def stream(self, path: str, *, chunk_size: int = DEFAULT_CHUNK_BYTES) -> Iterator[bytes]:
@@ -424,6 +484,37 @@ class AsyncVolume(_BaseVolume):
         await self._volumes.move_volume_file(
             id=self.id,
             body=_move_request(from_path, to_path),
+        )
+
+    async def file_url(
+        self,
+        path: str,
+        *,
+        method: VolumeFileUrlRequestMethod | str = VolumeFileUrlRequestMethod.GET,
+        expires_in_seconds: int | None = None,
+        if_match: str | None = None,
+        if_none_match: bool | None = None,
+        download_name: str | None = None,
+    ) -> VolumeFileUrl:
+        """Sign a URL that allows its method on one file, any number of times, until it expires.
+
+        The URL needs no Porter credentials. Hand it to whoever should read or
+        write the file, such as a browser or another service, and keep it out of
+        logs:
+
+        - `method="GET"` downloads the file (HEAD works too). `download_name` is
+          the name a browser saves it under.
+        - `method="PUT"` uploads it. `if_none_match=True` only creates the file,
+          and `if_match=<etag>` only replaces that version; otherwise the upload
+          answers 412.
+
+        A URL lives 15 minutes unless `expires_in_seconds` says otherwise, at
+        most 7 days. The result carries the file's current ETag, an empty string
+        when nothing is at the path yet.
+        """
+        return await self._volumes.create_volume_file_url(
+            id=self.id,
+            body=_file_url_request(path, method, expires_in_seconds, if_match, if_none_match, download_name),
         )
 
     async def stream(

@@ -15,6 +15,8 @@ from .._models import (
     Volume,
     VolumeFileListResponse,
     VolumeFileMoveRequest,
+    VolumeFileUrl,
+    VolumeFileUrlRequest,
     VolumeListResponse,
     VolumeSpec,
 )
@@ -153,6 +155,21 @@ class Volumes:
         self._client._request(method="POST", path=path, json=body.model_dump(by_alias=True, exclude_none=True) if hasattr(body, "model_dump") else body)
         return None
 
+    def create_volume_file_url(self, id: str, body: VolumeFileUrlRequest) -> VolumeFileUrl:
+        """
+        Sign a volume file URL
+
+        Returns a URL that allows its method on one file of the volume, any
+        number of times, until it expires, with no other credentials: GET (and HEAD) to read the file,
+        PUT to write it. A PUT URL can carry a write condition, which the
+        upload cannot drop: if_none_match only creates a new file, and if_match
+        only replaces the file at that version (both fail with 412 otherwise).
+        The response also carries the file's current ETag.
+        """
+        path = f"/v1/volume/{id}/files/url"
+        response = self._client._request(method="POST", path=path, json=body.model_dump(by_alias=True, exclude_none=True) if hasattr(body, "model_dump") else body)
+        return _coerce(VolumeFileUrl, response)
+
 
 class AsyncVolumes:
     """Volumes resource."""
@@ -279,3 +296,18 @@ class AsyncVolumes:
         path = f"/v1/volume/{id}/files/move"
         await self._client._request(method="POST", path=path, json=body.model_dump(by_alias=True, exclude_none=True) if hasattr(body, "model_dump") else body)
         return None
+
+    async def create_volume_file_url(self, id: str, body: VolumeFileUrlRequest) -> VolumeFileUrl:
+        """
+        Sign a volume file URL
+
+        Returns a URL that allows its method on one file of the volume, any
+        number of times, until it expires, with no other credentials: GET (and HEAD) to read the file,
+        PUT to write it. A PUT URL can carry a write condition, which the
+        upload cannot drop: if_none_match only creates a new file, and if_match
+        only replaces the file at that version (both fail with 412 otherwise).
+        The response also carries the file's current ETag.
+        """
+        path = f"/v1/volume/{id}/files/url"
+        response = await self._client._request(method="POST", path=path, json=body.model_dump(by_alias=True, exclude_none=True) if hasattr(body, "model_dump") else body)
+        return _coerce(VolumeFileUrl, response)
